@@ -1,0 +1,38 @@
+# Binaries
+sato
+*.exe
+*.dll
+*.so
+*.dylib
+
+# KeePass databases (SECURITY: never commit secrets)
+*.kdbx
+# But keep test database for CI/testing
+!playground/secrets.kdbx
+
+# Go build and test
+go.sum.bak
+coverage.out
+*.test
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Dist
+dist/
