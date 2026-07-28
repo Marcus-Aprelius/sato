@@ -1,16 +1,17 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_DIR"
+
 DIST_DIR="$PROJECT_DIR/dist"
 
 BINARY_NAME="sato"
 BUILDER_IMAGE="sato:builder"
 GO_IMAGE="golang:1.26.5-alpine"
 
-VERSION="0.0.1"
+VERSION="0.0.2"
 
 mkdir -p "$DIST_DIR"
 
@@ -34,10 +35,9 @@ show_env() {
 }
 
 build_bin() {
-
     show_env
 
-    echo "[Building sato binary]"
+    echo "[Building SATO]"
     echo "Project directory: $PROJECT_DIR"
     echo ""
 
@@ -50,6 +50,7 @@ build_bin() {
     echo "Building Docker image..."
 
     docker build \
+        --build-arg VERSION="$VERSION" \
         --build-arg GIT_COMMIT="$GIT_COMMIT" \
         --target builder \
         -t "$BUILDER_IMAGE" \
@@ -80,26 +81,40 @@ build_bin() {
     echo ""
 }
 
-build_deb() {
+ensure_bin() {
+    if [ ! -f "$DIST_DIR/$BINARY_NAME" ]; then
+        build_bin
+    fi
+}
 
-    build_bin
+build_deb_package() {
+    (
+        ensure_bin
 
-    echo ""
-    echo "[Building DEB package]"
+        echo ""
+        echo "[Building DEB package]"
 
-    PKG_DIR="$DIST_DIR/deb"
+        PKG_DIR="$DIST_DIR/deb"
+        HOST_UID="$(id -u)"
+        HOST_GID="$(id -g)"
 
-    rm -rf "$PKG_DIR"
+        cleanup_deb() {
+            rm -rf "$PKG_DIR" 2>/dev/null || true
+        }
 
-    mkdir -p \
-        "$PKG_DIR/usr/local/bin" \
-        "$PKG_DIR/DEBIAN"
+        trap cleanup_deb EXIT
 
-    cp \
-        "$DIST_DIR/$BINARY_NAME" \
-        "$PKG_DIR/usr/local/bin/sato"
+        rm -rf "$PKG_DIR"
 
-    cat > "$PKG_DIR/DEBIAN/control" <<EOF
+        mkdir -p \
+            "$PKG_DIR/usr/local/bin" \
+            "$PKG_DIR/DEBIAN"
+
+        cp \
+            "$DIST_DIR/$BINARY_NAME" \
+            "$PKG_DIR/usr/local/bin/sato"
+
+        cat > "$PKG_DIR/DEBIAN/control" <<EOF
 Package: sato
 Version: ${VERSION}
 Section: utils
@@ -110,44 +125,57 @@ Description: Secure Access Task Operator
  Like sudo, but for secrets.
 EOF
 
-    docker run --rm \
-        -v "$DIST_DIR:/dist" \
-        ubuntu:24.04 \
-        bash -c '
-            apt-get update >/dev/null &&
-            apt-get install -y dpkg >/dev/null &&
-            dpkg-deb --build /dist/deb /dist/sato_'${VERSION}'_amd64.deb
-        '
+        docker run --rm \
+            -v "$DIST_DIR:/dist" \
+            ubuntu:24.04 \
+            bash -c '
+                apt-get update >/dev/null &&
+                apt-get install -y dpkg >/dev/null &&
+                dpkg-deb --build /dist/deb /dist/sato_'${VERSION}'_amd64.deb &&
+                chown -R '"$HOST_UID:$HOST_GID"' /dist/deb /dist/sato_'${VERSION}'_amd64.deb
+            '
 
-    rm -rf "$PKG_DIR"
+        if [ ! -f "$DIST_DIR/sato_${VERSION}_amd64.deb" ]; then
+            echo "DEB build failed"
+            exit 1
+        fi
 
-    echo ""
-    echo "Created:"
-    echo "  $DIST_DIR/sato_${VERSION}_amd64.deb"
+        echo ""
+        echo "Created:"
+        echo "  $DIST_DIR/sato_${VERSION}_amd64.deb"
+    )
 }
 
-build_rpm() {
+build_rpm_package() {
+    (
+        ensure_bin
 
-    build_bin
+        echo ""
+        echo "[Building RPM package]"
 
-    echo ""
-    echo "[Building RPM package]"
+        PKG_DIR="$DIST_DIR/rpm"
+        HOST_UID="$(id -u)"
+        HOST_GID="$(id -g)"
 
-    PKG_DIR="$DIST_DIR/rpm"
+        cleanup_rpm() {
+            rm -rf "$PKG_DIR" 2>/dev/null || true
+        }
 
-    rm -rf "$PKG_DIR"
+        trap cleanup_rpm EXIT
 
-    mkdir -p \
-        "$PKG_DIR/BUILD" \
-        "$PKG_DIR/RPMS" \
-        "$PKG_DIR/SOURCES" \
-        "$PKG_DIR/SPECS" \
-        "$PKG_DIR/SRPMS"
+        rm -rf "$PKG_DIR"
 
-    cp "$DIST_DIR/$BINARY_NAME" \
-       "$PKG_DIR/SOURCES/sato"
+        mkdir -p \
+            "$PKG_DIR/BUILD" \
+            "$PKG_DIR/RPMS" \
+            "$PKG_DIR/SOURCES" \
+            "$PKG_DIR/SPECS" \
+            "$PKG_DIR/SRPMS"
 
-    cat > "$PKG_DIR/SPECS/sato.spec" <<EOF
+        cp "$DIST_DIR/$BINARY_NAME" \
+           "$PKG_DIR/SOURCES/sato"
+
+        cat > "$PKG_DIR/SPECS/sato.spec" <<EOF
 Name: sato
 Version: ${VERSION}
 Release: 1
@@ -167,39 +195,61 @@ install -m 755 %{_sourcedir}/sato %{buildroot}/usr/local/bin/sato
 /usr/local/bin/sato
 EOF
 
-    docker run --rm \
-        -v "$DIST_DIR/rpm:/root/rpmbuild" \
-        rockylinux:9 \
-        bash -c '
-            dnf install -y rpm-build >/dev/null &&
-            rpmbuild -bb /root/rpmbuild/SPECS/sato.spec
-        '
+        docker run --rm \
+            -v "$DIST_DIR/rpm:/root/rpmbuild" \
+            rockylinux:9 \
+            bash -c '
+                dnf install -y rpm-build >/dev/null &&
+                rpmbuild -bb /root/rpmbuild/SPECS/sato.spec &&
+                chown -R '"$HOST_UID:$HOST_GID"' /root/rpmbuild
+            '
 
-    RPM_FILE=$(find "$PKG_DIR/RPMS" -name '*.rpm' | head -1)
+        RPM_FILE=$(find "$PKG_DIR/RPMS" -name '*.rpm' | head -1)
 
-    if [ -n "$RPM_FILE" ]; then
+        if [ -z "$RPM_FILE" ]; then
+            echo "RPM build failed"
+            exit 1
+        fi
+
         cp "$RPM_FILE" "$DIST_DIR/"
-    fi
 
-    rm -rf "$PKG_DIR"
-
-    echo ""
-    echo "Created RPM package:"
-    ls -1 "$DIST_DIR"/*.rpm
+        echo ""
+        echo "Created RPM package:"
+        ls -1 "$DIST_DIR"/*.rpm
+    )
 }
 
-case "$1" in
+build_all() {
+    build_bin
+    build_deb_package
+    build_rpm_package
+
+    echo ""
+    echo "[All artifacts created]"
+    echo "  $DIST_DIR/$BINARY_NAME"
+    echo "  $DIST_DIR/sato_${VERSION}_amd64.deb"
+
+    if ls "$DIST_DIR"/*.rpm >/dev/null 2>&1; then
+        ls -1 "$DIST_DIR"/*.rpm | sed 's/^/  /'
+    fi
+}
+
+case "${1:-}" in
 
     bin)
         build_bin
         ;;
 
     deb)
-        build_deb
+        build_deb_package
         ;;
 
     rpm)
-        build_rpm
+        build_rpm_package
+        ;;
+
+    all)
+        build_all
         ;;
 
     *)
@@ -207,6 +257,7 @@ case "$1" in
         echo "  $0 bin"
         echo "  $0 deb"
         echo "  $0 rpm"
+        echo "  $0 all"
         exit 1
         ;;
 

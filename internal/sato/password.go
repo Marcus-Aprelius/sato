@@ -28,7 +28,7 @@ func ReadPassword() (string, error) {
 	// Piped input: read password directly from stdin
 	reader := bufio.NewReader(os.Stdin)
 	pass, err := reader.ReadString('\n')
-	if err != nil {
+	if err != nil && len(pass) == 0 {
 		return "", err
 	}
 

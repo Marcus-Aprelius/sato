@@ -3,7 +3,6 @@ package sato_test
 import (
 	"bytes"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -156,14 +155,6 @@ func TestCLIGetSecretsShowEmptyGroupsRequiresTree(t *testing.T) {
 
 	if !strings.Contains(stderr.String(), "--show-empty-groups requires --tree") {
 		t.Fatalf("stderr missing expected error; stderr:\n%s", stderr.String())
-	}
-}
-
-func TestPlaygroundComposeFileExists(t *testing.T) {
-	composePath := filepath.Join(projectRoot(t), "playground", "docker-compose.yml")
-
-	if _, err := filepath.Abs(composePath); err != nil {
-		t.Fatalf("compose path: %v", err)
 	}
 }
 
