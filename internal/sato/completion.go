@@ -104,12 +104,22 @@ _sato_completion() {
 			;;
 		3)
 			if [[ "${words[1]}" == "get" && "${words[2]}" == "secrets" ]]; then
-				COMPREPLY=( $(compgen -W "--tree" -- "$cur") )
+				COMPREPLY=( $(compgen -W "--tree --show-empty-groups" -- "$cur") )
 			fi
 			;;
 		4)
-			if [[ "${words[1]}" == "get" && "${words[2]}" == "secrets" && "${words[3]}" == "--tree" ]]; then
-				COMPREPLY=( $(compgen -W "--show-empty-groups" -- "$cur") )
+			if [[ "${words[1]}" == "get" && "${words[2]}" == "secrets" ]]; then
+				case " ${words[*]} " in
+					*" --tree "*)
+						COMPREPLY=( $(compgen -W "--show-empty-groups" -- "$cur") )
+						;;
+					*" --show-empty-groups "*)
+						COMPREPLY=( $(compgen -W "--tree" -- "$cur") )
+						;;
+					*)
+						COMPREPLY=( $(compgen -W "--tree --show-empty-groups" -- "$cur") )
+						;;
+				esac
 			fi
 			;;
 	esac
@@ -118,7 +128,7 @@ _sato_completion() {
 complete -F _sato_completion sato
 `
 
-// Generate and print the completion script for the shell
+// RunCompletion generates and prints the completion script for the shell.
 func RunCompletion(shell string) {
 	switch shell {
 	case "bash":

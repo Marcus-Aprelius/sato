@@ -11,7 +11,7 @@ BINARY_NAME="sato"
 BUILDER_IMAGE="sato:builder"
 GO_IMAGE="golang:1.26.5-alpine"
 
-VERSION="0.0.2"
+VERSION="0.0.3"
 
 mkdir -p "$DIST_DIR"
 
@@ -43,7 +43,7 @@ build_bin() {
 
     GIT_COMMIT=$(
         cd "$PROJECT_DIR" &&
-        git rev-parse --short HEAD 2>/dev/null ||
+        git rev-parse --short=8 HEAD 2>/dev/null ||
         echo "unknown"
     )
 

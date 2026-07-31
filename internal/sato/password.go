@@ -1,8 +1,8 @@
 package sato
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"syscall"
@@ -11,26 +11,41 @@ import (
 )
 
 // ReadPassword reads the KeePass master password from stdin.
-// In interactive mode, it hides the input; in piped mode, it reads the password directly.
+// The password prompt is printed to stderr.
 func ReadPassword() (string, error) {
-	fmt.Fprint(os.Stderr, "KeePass password: ")
+	return ReadPasswordWithPrompt(true)
+}
 
-	// Check if stdin is a terminal (interactive mode)
+// ReadPasswordWithPrompt reads the KeePass master password from stdin.
+// In interactive mode, input is hidden.
+// In piped mode, all stdin is read, so both "echo sato" and "printf sato" work.
+func ReadPasswordWithPrompt(showPrompt bool) (string, error) {
+	if showPrompt {
+		fmt.Fprint(os.Stderr, "KeePass password: ")
+	}
+
 	if term.IsTerminal(int(syscall.Stdin)) {
 		pass, err := term.ReadPassword(int(syscall.Stdin))
-		fmt.Fprintln(os.Stderr)
+		if showPrompt {
+			fmt.Fprintln(os.Stderr)
+		}
+
 		if err != nil {
 			return "", err
 		}
+
 		return string(pass), nil
 	}
 
-	// Piped input: read password directly from stdin
-	reader := bufio.NewReader(os.Stdin)
-	pass, err := reader.ReadString('\n')
-	if err != nil && len(pass) == 0 {
+	data, err := io.ReadAll(os.Stdin)
+	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(pass), nil
+	password := strings.TrimSpace(string(data))
+	if password == "" {
+		return "", io.EOF
+	}
+
+	return password, nil
 }

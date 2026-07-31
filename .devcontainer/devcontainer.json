@@ -1,0 +1,34 @@
+{
+  "name": "sato-dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "USERNAME": "sato",
+      "USER_UID": "1000",
+      "USER_GID": "1000"
+    }
+  },
+  "remoteUser": "sato",
+  "workspaceFolder": "/workspaces/sato",
+  "mounts": [
+    "source=sato-go-mod-cache,target=/home/sato/go/pkg/mod,type=volume",
+    "source=sato-go-build-cache,target=/home/sato/.cache/go-build,type=volume",
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "postCreateCommand": "sudo mkdir -p /home/sato/go/pkg/mod /home/sato/.cache/go-build && sudo chown -R sato:sato /home/sato/go /home/sato/.cache && go mod download",
+  "postStartCommand": "if [ -S /var/run/docker.sock ]; then sudo setfacl -m u:sato:rw /var/run/docker.sock; fi",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.Go",
+        "ms-azuretools.vscode-docker",
+        "github.vscode-github-actions",
+        "marcusapreliusantoninus.sato-vscode-ext"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": true,
+        "go.formatTool": "gofmt"
+      }
+    }
+  }
+}
