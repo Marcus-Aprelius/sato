@@ -1,7 +1,9 @@
 #!/bin/bash
-# E2E test: version output contains version string and commit SHA in [brackets]
+# E2E test: version output contains SATO version, commit SHA,
+# and Docker Compose version when Docker Compose is available.
 
 set -e
+
 SATO_BIN="${SATO_BIN:-$(cd "$(dirname "$0")/../.." && pwd)/dist/sato}"
 
 if [ ! -x "$SATO_BIN" ]; then
@@ -11,7 +13,6 @@ fi
 
 out=$("$SATO_BIN" version)
 
-# Expect two lines: "vX.Y.Z" and "[<commit>]"
 if ! echo "$out" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
     echo "FAIL: version line missing or malformed" >&2
     echo "$out" >&2
@@ -22,6 +23,14 @@ if ! echo "$out" | grep -qE '^\[[a-z0-9]+\]$'; then
     echo "FAIL: commit line missing or malformed" >&2
     echo "$out" >&2
     exit 1
+fi
+
+if command -v docker >/dev/null 2>&1 && docker compose version --short >/dev/null 2>&1; then
+    if ! echo "$out" | grep -qE '^Docker Compose: .+'; then
+        echo "FAIL: Docker Compose version line missing" >&2
+        echo "$out" >&2
+        exit 1
+    fi
 fi
 
 echo "PASS: version output correct"

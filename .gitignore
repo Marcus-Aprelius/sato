@@ -1,5 +1,5 @@
 # Binaries
-sato
+/sato
 *.exe
 *.dll
 *.so
@@ -7,8 +7,6 @@ sato
 
 # KeePass databases (SECURITY: never commit secrets)
 *.kdbx
-# But keep test database for CI/testing
-!playground/secrets.kdbx
 
 # Go build and test
 go.sum.bak
@@ -36,3 +34,11 @@ Thumbs.db
 
 # Dist
 dist/
+
+# Test reports
+tests/report_*.txt
+
+# Generated playground files
+playground/.env
+playground/docker-compose.yml
+playground/secrets.kdbx

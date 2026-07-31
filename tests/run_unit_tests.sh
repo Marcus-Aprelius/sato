@@ -25,11 +25,71 @@ rm -f "$REPORT_FILE"
 
     trap cleanup EXIT
 
+    warn_gofmt() {
+        echo "=== Check gofmt ==="
+
+        if command -v go >/dev/null 2>&1; then
+            unformatted="$(
+                find . \
+                    -type f \
+                    -name "*.go" \
+                    -not -path "./vendor/*" \
+                    -not -path "./dist/*" \
+                    -not -path "./bin/*" \
+                    -exec gofmt -l {} \;
+            )"
+        else
+            unformatted="$(
+                docker run --rm \
+                    -v "$PROJECT_DIR:/src" \
+                    -w /src \
+                    golang:1.26.5-alpine \
+                    sh -c 'find . -type f -name "*.go" -not -path "./vendor/*" -not -path "./dist/*" -not -path "./bin/*" -exec gofmt -l {} \;'
+            )"
+        fi
+
+        if [ -n "$unformatted" ]; then
+            echo "WARNING: gofmt is required for:"
+            echo "$unformatted"
+            echo ""
+            echo "Run:"
+            echo "$unformatted" | sed 's/^/  gofmt -w /'
+            echo ""
+            echo "Continuing tests..."
+            echo ""
+            return 0
+        fi
+
+        echo "PASS: gofmt"
+        echo ""
+    }
+
+    run_go_vet() {
+        echo "=== Go vet ==="
+
+        if command -v go >/dev/null 2>&1; then
+            go vet ./...
+        else
+            docker run --rm \
+                -v "$PROJECT_DIR:/src" \
+                -w /src \
+                golang:1.26.5-alpine \
+                go vet ./...
+        fi
+
+        echo "PASS: go vet"
+        echo ""
+    }
+
+
+    warn_gofmt
+    run_go_vet
+
     if command -v go >/dev/null 2>&1; then
         echo "[Runner] local go"
         go version
         echo ""
-        go test -v -coverpkg=./internal/sato ./tests/unit
+        go test -v -coverpkg=./internal/sato ./internal/sato ./tests/unit
     else
         echo "[Runner] docker golang:1.26.5-alpine"
         echo ""
@@ -37,7 +97,7 @@ rm -f "$REPORT_FILE"
             -v "$PROJECT_DIR:/src" \
             -w /src \
             golang:1.26.5-alpine \
-            go test -v -coverpkg=./internal/sato ./tests/unit
+            go test -v -coverpkg=./internal/sato ./internal/sato ./tests/unit
     fi
 } 2>&1 | tee "$REPORT_FILE"
 

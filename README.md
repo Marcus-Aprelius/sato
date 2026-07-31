@@ -34,6 +34,7 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://go.dev/)
+[![Release](https://img.shields.io/github/v/release/Marcus-Aprelius/sato)](https://github.com/Marcus-Aprelius/sato/releases)
 
 ---
 
@@ -44,7 +45,7 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
   * OS Linux
   * [docker compose](https://docs.docker.com/compose/install/linux) - to have ability to use `sato`
 * optional:
-  * [git](https://git-scm.com/install/linux)           - for cloning source's repository
+  * [git](https://git-scm.com/install/linux)           - for cloning repository
   * [docker](https://docs.docker.com/engine/install/)  - for manual binary building
   * [keepassxc](https://keepassxc.org/download/#linux) - to edit secrets via UI
 
@@ -57,29 +58,29 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
 
 * .deb package:
   ```bash
-  wget https://github.com/Marcus-Aprelius/sato/releases/download/latest/sato_0.0.1_amd64.deb
+  wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.2/sato_0.0.2_amd64.deb
   ```
 
 * .rpm package:
   ```bash
-  wget https://github.com/Marcus-Aprelius/sato/releases/download/latest/sato-0.0.1-1.x86_64.rpm
+  wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.2/sato-0.0.2-1.x86_64.rpm
   ```
 
 ### 3. Install `sato`:
-  ```bash
-  # from binary file
-  chmod +x sato && sudo mv sato /usr/local/bin/
-  ```
+  * from `bin`ary file:
+    ```bash
+    chmod +x sato && sudo cp sato /usr/local/bin/
+    ```
 
-  ```bash
-  # from .deb package:
-  sudo dpkg -i sato_0.0.1_amd64.deb
-  ```
+  * from `.deb` package:
+    ```bash
+    sudo dpkg -i sato_0.0.2_amd64.deb
+    ```
 
-  ```bash
-  # from .rpm package:
-  sudo yum install -y sato-0.0.1-1.x86_64.rpm
-  ```
+  * from `.rpm` package:
+    ```bash
+    sudo yum install -y sato-0.0.2-1.x86_64.rpm
+    ```
 
 ---
 

@@ -2,6 +2,7 @@ package sato
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -10,12 +11,14 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 // Version and Build info.
 // These can be set during build via ldflags.
 var (
-	Version   = "v0.0.1"
+	Version   = "v0.0.0-dev"
 	GitCommit = "unknown"
 )
 
@@ -78,22 +81,8 @@ func dockerComposeVersion() string {
 }
 
 func fileAccess(path string) string {
-	readOK := true
-	writeOK := true
-
-	f, err := os.Open(path)
-	if err != nil {
-		readOK = false
-	} else {
-		f.Close()
-	}
-
-	f, err = os.OpenFile(path, os.O_WRONLY, 0)
-	if err != nil {
-		writeOK = false
-	} else {
-		f.Close()
-	}
+	readOK := unix.Access(path, unix.R_OK) == nil
+	writeOK := unix.Access(path, unix.W_OK) == nil
 
 	switch {
 	case readOK && writeOK:
@@ -324,12 +313,15 @@ func printStatus(dbPathFlag string) {
 
 	dbPath := FindDBPath(dbPathFlag)
 
+	localPath := satoLocalStatus()
+	envPath := os.Getenv("SATO_DB_PATH")
+
 	if dbPath != "" {
 		if dbPathFlag != "" && dbPath == dbPathFlag {
 			activePriority = 1
-		} else if local := satoLocalStatus(); local != "" && dbPath == local {
+		} else if localPath != "" && dbPath == localPath {
 			activePriority = 2
-		} else if env := os.Getenv("SATO_DB_PATH"); env != "" && dbPath == env {
+		} else if envPath != "" && dbPath == envPath {
 			activePriority = 3
 		}
 	}
@@ -346,16 +338,14 @@ func printStatus(dbPathFlag string) {
 
 	localStatus := "not found"
 
-	if satoLocalStatus() != "" {
+	if localPath != "" {
 		localStatus = "found"
 	}
 
 	envStatus := "not set"
 
-	envVal := os.Getenv("SATO_DB_PATH")
-
-	if envVal != "" {
-		if _, err := os.Stat(envVal); err == nil {
+	if envPath != "" {
+		if _, err := os.Stat(envPath); err == nil {
 			envStatus = "set"
 		} else {
 			envStatus = "set (DB is missing)"
@@ -369,32 +359,78 @@ func printStatus(dbPathFlag string) {
 		return fmt.Sprintf(" %d", n)
 	}
 
-	fmt.Println(" Priority | Path           | Status")
-	fmt.Println("----------|----------------|-----------")
+	modeCell := func(path string) string {
+		if path == "" {
+			return ""
+		}
 
-	fmt.Printf("%-9s | %-14s | %s\n",
-		priCell(1), "--db-path", dbPathStatus)
+		if _, err := os.Stat(path); err != nil {
+			return ""
+		}
 
-	fmt.Printf("%-9s | %-14s | %s\n",
-		priCell(2), "~/.sato/*.kdbx", localStatus)
+		mode := fileAccess(path)
+		if mode == "--" {
+			return ""
+		}
 
-	fmt.Printf("%-9s | %-14s | %s\n",
-		priCell(3), "SATO_DB_PATH", envStatus)
+		return mode
+	}
+
+	showMode := dbPath != ""
+
+	if showMode {
+		fmt.Println(" Priority | Path           | Status              | Mode")
+		fmt.Println("----------|----------------|---------------------|------")
+
+		fmt.Printf("%-9s | %-14s | %-19s | %s\n",
+			priCell(1),
+			"--db-path",
+			dbPathStatus,
+			modeCell(dbPathFlag),
+		)
+
+		fmt.Printf("%-9s | %-14s | %-19s | %s\n",
+			priCell(2),
+			"~/.sato/*.kdbx",
+			localStatus,
+			modeCell(localPath),
+		)
+
+		fmt.Printf("%-9s | %-14s | %-19s | %s\n",
+			priCell(3),
+			"SATO_DB_PATH",
+			envStatus,
+			modeCell(envPath),
+		)
+	} else {
+		fmt.Println(" Priority | Path           | Status")
+		fmt.Println("----------|----------------|-----------")
+
+		fmt.Printf("%-9s | %-14s | %s\n",
+			priCell(1),
+			"--db-path",
+			dbPathStatus,
+		)
+
+		fmt.Printf("%-9s | %-14s | %s\n",
+			priCell(2),
+			"~/.sato/*.kdbx",
+			localStatus,
+		)
+
+		fmt.Printf("%-9s | %-14s | %s\n",
+			priCell(3),
+			"SATO_DB_PATH",
+			envStatus,
+		)
+	}
 
 	fmt.Println()
 
 	if dbPath != "" {
-		fmt.Printf(
-			"Database: %s [%s]\n",
-			dbPath,
-			fileAccess(dbPath),
-		)
+		fmt.Printf("Database: %s\n", dbPath)
 	} else {
 		fmt.Println("Database: not found")
-	}
-
-	if version := dockerComposeVersion(); version != "" {
-		fmt.Printf("Docker Compose: %s\n", version)
 	}
 }
 
@@ -409,6 +445,9 @@ func Run() error {
 		switch args[0] {
 		case "version":
 			fmt.Printf("%s\n[%s]\n", Version, GitCommit)
+			if version := dockerComposeVersion(); version != "" {
+				fmt.Printf("Docker Compose: %s\n", version)
+			}
 			os.Exit(0)
 		case "completion":
 			shell := "bash"
@@ -422,23 +461,6 @@ func Run() error {
 			os.Exit(0)
 		case "get":
 			if len(args) > 1 && args[1] == "secrets" {
-				dbPath := FindDBPath(*dbPathFlag)
-				if dbPath == "" {
-					return fmt.Errorf("database not found")
-				}
-
-				fmt.Fprintf(os.Stderr, "[DB: %s]\n", dbPath)
-
-				password, err := ReadPassword()
-				if err != nil {
-					return err
-				}
-
-				data, err := LoadKeePassData(dbPath, password)
-				if err != nil {
-					return err
-				}
-
 				treeMode := false
 				showEmptyGroups := false
 
@@ -454,7 +476,24 @@ func Run() error {
 				}
 
 				if showEmptyGroups && !treeMode {
-					return fmt.Errorf("--show-empty-groups requires --tree")
+					return errors.New("--show-empty-groups requires --tree")
+				}
+
+				dbPath := FindDBPath(*dbPathFlag)
+				if dbPath == "" {
+					return errors.New("DB not found")
+				}
+
+				fmt.Fprintf(os.Stderr, "[DB: %s]\n", dbPath)
+
+				password, err := ReadPassword()
+				if err != nil {
+					return err
+				}
+
+				data, err := LoadKeePassData(dbPath, password)
+				if err != nil {
+					return err
 				}
 
 				if treeMode {

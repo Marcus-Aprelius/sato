@@ -7,12 +7,10 @@ import (
 	"testing"
 
 	"sato/internal/sato"
-
-	"github.com/tobischo/gokeepasslib/v3"
-	w "github.com/tobischo/gokeepasslib/v3/wrappers"
+	"sato/internal/testdb"
 )
 
-const testDBPassword = "sato"
+const testDBPassword = testdb.DefaultPassword
 
 func projectRoot(t *testing.T) string {
 	t.Helper()
@@ -30,97 +28,20 @@ func projectRoot(t *testing.T) string {
 	return root
 }
 
-func playgroundDBPath(t *testing.T) string {
-	t.Helper()
-
-	path := filepath.Join(projectRoot(t), "playground", "secrets.kdbx")
-
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("playground database missing at %s: %v", path, err)
-	}
-
-	return path
-}
-
-func mkValue(key, value string) gokeepasslib.ValueData {
-	return gokeepasslib.ValueData{
-		Key:   key,
-		Value: gokeepasslib.V{Content: value},
-	}
-}
-
-func mkProtectedValue(key, value string) gokeepasslib.ValueData {
-	return gokeepasslib.ValueData{
-		Key: key,
-		Value: gokeepasslib.V{
-			Content:   value,
-			Protected: w.NewBoolWrapper(true),
-		},
-	}
-}
-
-func mkEntry(title, password string) gokeepasslib.Entry {
-	entry := gokeepasslib.NewEntry()
-	entry.Values = append(entry.Values, mkValue("Title", title))
-	entry.Values = append(entry.Values, mkProtectedValue("Password", password))
-	return entry
-}
-
 func createUnitKeePassDB(t *testing.T) string {
 	t.Helper()
 
-	rootGroup := gokeepasslib.NewGroup()
-	rootGroup.Name = "Secrets"
-
-	rootGroup.Entries = append(rootGroup.Entries, mkEntry("DB_PASSWORD", "db-pass"))
-	rootGroup.Entries = append(rootGroup.Entries, mkEntry("API_KEY", "api-key"))
-	rootGroup.Entries = append(rootGroup.Entries, mkEntry("NGINX_PASSWORD", "nginx-pass"))
-
-	testGroup := gokeepasslib.NewGroup()
-	testGroup.Name = "test"
-	testGroup.Entries = append(testGroup.Entries, mkEntry("test1", "value-1"))
-	testGroup.Entries = append(testGroup.Entries, mkEntry("test2", "value-2"))
-
-	emptyNested := gokeepasslib.NewGroup()
-	emptyNested.Name = "empty-nested"
-	testGroup.Groups = append(testGroup.Groups, emptyNested)
-
-	emptyGroup := gokeepasslib.NewGroup()
-	emptyGroup.Name = "empty-group"
-
-	rootGroup.Groups = append(rootGroup.Groups, testGroup)
-	rootGroup.Groups = append(rootGroup.Groups, emptyGroup)
-
-	db := &gokeepasslib.Database{
-		Header:      gokeepasslib.NewHeader(),
-		Credentials: gokeepasslib.NewPasswordCredentials(testDBPassword),
-		Content: &gokeepasslib.DBContent{
-			Meta: gokeepasslib.NewMetaData(),
-			Root: &gokeepasslib.RootData{
-				Groups: []gokeepasslib.Group{rootGroup},
-			},
-		},
-	}
-
-	db.LockProtectedEntries()
-
 	dbPath := filepath.Join(t.TempDir(), "unit-secrets.kdbx")
 
-	file, err := os.Create(dbPath)
-	if err != nil {
-		t.Fatalf("create db: %v", err)
-	}
-	defer file.Close()
-
-	if err := gokeepasslib.NewEncoder(file).Encode(db); err != nil {
-		t.Fatalf("encode db: %v", err)
+	if err := testdb.WriteDemoDatabase(dbPath, testDBPassword); err != nil {
+		t.Fatalf("create test db: %v", err)
 	}
 
 	return dbPath
 }
 
 func TestLoadKeePass_Playground(t *testing.T) {
-	dbPath := playgroundDBPath(t)
+	dbPath := createUnitKeePassDB(t)
 
 	entries, err := sato.LoadKeePass(dbPath, testDBPassword)
 	if err != nil {
@@ -159,11 +80,11 @@ func TestLoadKeePassEntries_ReadsNestedGroups(t *testing.T) {
 	}
 
 	want := map[string]string{
-		"Secrets/API_KEY":        "api-key",
-		"Secrets/DB_PASSWORD":    "db-pass",
-		"Secrets/NGINX_PASSWORD": "nginx-pass",
-		"Secrets/test/test1":     "value-1",
-		"Secrets/test/test2":     "value-2",
+		"Secrets/API_KEY":        "sk-test-api-key-xyz789",
+		"Secrets/DB_PASSWORD":    "super_secret_db_password_123",
+		"Secrets/NGINX_PASSWORD": "nginx_password_demo_456",
+		"Secrets/test/test1":     "test_secret_value_1",
+		"Secrets/test/test2":     "test_secret_value_2",
 	}
 
 	for path, value := range want {
@@ -233,11 +154,11 @@ func TestLoadKeePass_MapKeepsSecretNames(t *testing.T) {
 	}
 
 	want := map[string]string{
-		"DB_PASSWORD":    "db-pass",
-		"API_KEY":        "api-key",
-		"NGINX_PASSWORD": "nginx-pass",
-		"test1":          "value-1",
-		"test2":          "value-2",
+		"DB_PASSWORD":    "super_secret_db_password_123",
+		"API_KEY":        "sk-test-api-key-xyz789",
+		"NGINX_PASSWORD": "nginx_password_demo_456",
+		"test1":          "test_secret_value_1",
+		"test2":          "test_secret_value_2",
 	}
 
 	for key, value := range want {

@@ -1,5 +1,6 @@
 FROM golang:1.26.5-alpine AS builder
 
+ARG VERSION=0.0.0-dev
 ARG GIT_COMMIT=unknown
 
 WORKDIR /src
@@ -10,7 +11,7 @@ RUN go mod download
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build \
-    -ldflags="-s -w -X sato/internal/sato.GitCommit=${GIT_COMMIT}" \
+    -ldflags="-s -w -X sato/internal/sato.Version=v${VERSION} -X sato/internal/sato.GitCommit=${GIT_COMMIT}" \
     -o /out/sato
 
 FROM scratch

@@ -1,7 +1,7 @@
 # Tests
 Tests for the `SATO` project.
 
-Tests use [playground](playground/README.md) for testing purposes.
+Tests use [playground](../playground/README.md) for testing purposes.
 
 Tests consists of two types:
 - unit (Go)

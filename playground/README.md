@@ -2,7 +2,7 @@
 
 Demo environment for `SATO` Project. In this folder, you can try `sato` functionality before deciding whether to use it in a real environment.
 
-Also, this playground is used by tests scripts. See [tests/README.md](tests/README.md) for details.
+Also, this playground is used by tests scripts. See [tests/README.md](../tests/README.md) for details.
 
 ## Files
 
@@ -33,24 +33,30 @@ If files are present, it will reacreate them.
 
 Run any `docker compose` command:
 
-```bash
-# with secrets loaded from KeePass:
-echo "sato" | ../dist/sato --db-path=secrets.kdbx docker compose up -d
+* with secrets loaded from KeePass:
+  ```bash
+  sato --db-path=secrets.kdbx docker compose up -d
+  ```
 
-# with secrets loaded via env variable:
-export SATO_DB_PATH="$(pwd)/secrets.kdbx"
-echo "sato" | ../dist/sato docker compose config
-```
+* with secrets loaded via env variable:
+  ```bash
+  export SATO_DB_PATH="$(pwd)/secrets.kdbx"
+  sato docker compose config
+  ```
 
-List secret names:
+Examples - list secret names:
 
-```bash
-# as a list
-echo "sato" | ../dist/sato --db-path=secrets.kdbx get secrets
+* as a list
+  ```bash
+  sato --db-path=secrets.kdbx get secrets
+  ```
 
-# as a group tree:
-echo "sato" | ../dist/sato --db-path=secrets.kdbx get secrets --tree
+* as a group tree:
+  ```bash
+  sato --db-path=secrets.kdbx get secrets --tree
+  ```
 
-# as a group tree with an empty groups:
-echo "sato" | ../dist/sato --db-path=secrets.kdbx get secrets --tree --show-empty-groups
-```
+* as a group tree with an empty groups:
+  ```bash
+  sato --db-path=secrets.kdbx get secrets --tree --show-empty-groups
+  ```
