@@ -38,14 +38,12 @@ func FindKDBX(dir string) string {
 //
 // Returns "" if none is available.
 func FindDBPath(dbPathFlag string) string {
-	// 1. --db-path flag
 	if dbPathFlag != "" {
 		if _, err := os.Stat(dbPathFlag); err == nil {
 			return dbPathFlag
 		}
 	}
 
-	// 2. ~/.sato/*.kdbx
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
 		if p := FindKDBX(filepath.Join(homeDir, ".sato")); p != "" {
@@ -53,7 +51,6 @@ func FindDBPath(dbPathFlag string) string {
 		}
 	}
 
-	// 3. SATO_DB_PATH
 	if envPath := os.Getenv("SATO_DB_PATH"); envPath != "" {
 		if _, err := os.Stat(envPath); err == nil {
 			return envPath
@@ -63,11 +60,77 @@ func FindDBPath(dbPathFlag string) string {
 	return ""
 }
 
+func emptyGroupDisplayPaths(entries []SecretEntry, emptyGroupPaths []string) []string {
+	allPaths := make([][]string, 0, len(entries)+len(emptyGroupPaths))
+	groupPaths := make([][]string, 0, len(emptyGroupPaths))
+
+	for _, entry := range entries {
+		if parts := cleanPathParts(entry.Path); len(parts) > 0 {
+			allPaths = append(allPaths, parts)
+		}
+	}
+
+	for _, groupPath := range emptyGroupPaths {
+		if parts := cleanPathParts(groupPath); len(parts) > 0 {
+			groupPaths = append(groupPaths, parts)
+			allPaths = append(allPaths, parts)
+		}
+	}
+
+	if shouldStripTopGroup(allPaths) {
+		for i := range groupPaths {
+			groupPaths[i] = groupPaths[i][1:]
+		}
+	}
+
+	values := make([]string, 0, len(groupPaths))
+
+	for _, parts := range groupPaths {
+		if len(parts) == 0 {
+			continue
+		}
+
+		values = append(values, strings.Join(parts, "/")+"/")
+	}
+
+	return values
+}
+
+func osVersion() string {
+	data, err := os.ReadFile("/etc/os-release")
+	if err != nil {
+		return ""
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "PRETTY_NAME=") {
+			return strings.Trim(line[len("PRETTY_NAME="):], `"`)
+		}
+	}
+
+	return ""
+}
+
+func dockerVersion() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	out, err := exec.CommandContext(ctx, "docker", "version", "--format", "{{.Client.Version}}").Output()
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(string(out))
+}
+
 func dockerComposeVersion() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	out, err := exec.CommandContext(ctx, "docker", "compose", "version", "--short").Output()
+	out, err := exec.CommandContext(
+		ctx,
+		"docker", "compose", "version", "--short",
+	).Output()
 	if err != nil {
 		return ""
 	}
@@ -77,7 +140,28 @@ func dockerComposeVersion() string {
 		return ""
 	}
 
+	if i := strings.Index(version, "+"); i >= 0 {
+		version = version[:i]
+	}
+
 	return version
+}
+
+func gitVersion() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	out, err := exec.CommandContext(ctx, "git", "--version").Output()
+	if err != nil {
+		return ""
+	}
+
+	fields := strings.Fields(string(out))
+	if len(fields) < 3 {
+		return ""
+	}
+
+	return fields[2]
 }
 
 func fileAccess(path string) string {
@@ -127,6 +211,19 @@ func printTitle() {
 		red("A"),
 		red("T"),
 		red("O"),
+	)
+}
+
+func printLogoTitle() {
+	fmt.Printf(`   _____      _______ ____  
+  / ____|  /\|__   __| __ \    %secure
+ | (___   /  \  | | | |  | |    %sccess
+  \___ \ / /\ \ | | | |  | |     %sask
+  ____) | ____ \| | | |__| |      %sperator
+ |_____/_/    \_\_|  \____/    > like sudo, but for secrets
+
+`,
+		red("S"), red("A"), red("T"), red("O"),
 	)
 }
 
@@ -282,23 +379,26 @@ func printTreeChildren(node *treeNode, prefix string) {
 }
 
 func printHelp() {
-	printTitle()
-	fmt.Println()
+	printLogoTitle()
 	fmt.Println("Usage:")
 	fmt.Println("  sato [flags] docker compose [compose-args...]")
 	fmt.Println()
 	fmt.Println("Flags:")
-	fmt.Println("  --db-path=PATH       Path to KeePass-compatible .kdbx database")
+	fmt.Println("  --db-path=PATH                            Path to KeePass-compatible .kdbx database")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  version              Show version")
-	fmt.Println("  help                 Show this help")
-	fmt.Println("  completion bash      Show bash completion")
-	fmt.Println("  get secrets          List secret names from KeePass-compatible .kdbx database")
-	fmt.Println("  get secrets --tree   List secret names as a group tree")
-	fmt.Println("  get secrets --tree --show-empty-groups")
-	fmt.Println("                       Include empty groups in tree output")
-	fmt.Println("  docker compose ...   Run Docker Compose with KeePass-compatible secrets")
+	fmt.Println("  help                                      Show this help")
+	fmt.Println("  version                                   Show version")
+	fmt.Println("  completion bash                           Show bash completion")
+	fmt.Println()
+	fmt.Println("  get secrets                               List secret names from KeePass-compatible .kdbx database")
+	fmt.Println("  get secrets --show-empty-groups           List secret names and empty groups")
+	fmt.Println("  get secrets --tree                        List secret names as a group tree")
+	fmt.Println("  get secrets --tree --show-empty-groups    Include empty groups in tree output")
+	fmt.Println("  get secret <NAME>                         Print one value of <NAME> secret to stdout")
+	fmt.Println("  get secret <NAME> -q (--quiet)            Print only secret value, useful for scripts")
+	fmt.Println()
+	fmt.Println("  docker compose ...                        Run docker compose with KeePass-compatible secrets")
 
 	fmt.Println()
 	fmt.Printf("© %d Marcus Aprelius\n", time.Now().Year())
@@ -434,21 +534,86 @@ func printStatus(dbPathFlag string) {
 	}
 }
 
+func parseGetSecretArgs(args []string, inheritedQuiet bool) (string, bool, error) {
+	secretName := ""
+	quiet := inheritedQuiet
+
+	for _, arg := range args {
+		switch arg {
+		case "-q", "--quiet":
+			quiet = true
+		default:
+			if strings.HasPrefix(arg, "-") {
+				return "", quiet, fmt.Errorf("unknown option: %s", arg)
+			}
+
+			if secretName != "" {
+				return "", quiet, errors.New("usage: sato get secret NAME [-q|--quiet]")
+			}
+
+			secretName = arg
+		}
+	}
+
+	if secretName == "" {
+		return "", quiet, errors.New("usage: sato get secret NAME [-q|--quiet]")
+	}
+
+	return secretName, quiet, nil
+}
+
+func findSecretValue(entries []SecretEntry, name string) (string, error) {
+	matches := make([]SecretEntry, 0)
+
+	for _, entry := range entries {
+		if entry.Name == name {
+			matches = append(matches, entry)
+		}
+	}
+
+	if len(matches) == 0 {
+		return "", fmt.Errorf("secret not found: %s", name)
+	}
+
+	if len(matches) > 1 {
+		return "", fmt.Errorf("secret name is not unique: %s", name)
+	}
+
+	return matches[0].Value, nil
+}
+
 func Run() error {
 	dbPathFlag := flag.String("db-path", "", "path to KeePass-compatible .kdbx database")
+	qFlag := flag.Bool("q", false, "print only secret value for get secret")
+	quietFlag := flag.Bool("quiet", false, "print only secret value for get secret")
 	flag.Parse()
+
+	quietMode := *qFlag || *quietFlag
 
 	args := flag.Args()
 
-	// Handle special commands
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Printf("%s\n[%s]\n", Version, GitCommit)
+			fmt.Printf("%s\n", Version)
+			fmt.Printf("[SHA: %s]\n", GitCommit)
+			fmt.Println()
+
+			if version := gitVersion(); version != "" {
+				fmt.Printf("Git: %s\n", version)
+			}
+			if version := dockerVersion(); version != "" {
+				fmt.Printf("Docker: %s\n", version)
+			}
 			if version := dockerComposeVersion(); version != "" {
 				fmt.Printf("Docker Compose: %s\n", version)
 			}
+			if version := osVersion(); version != "" {
+				fmt.Printf("OS: %s\n", version)
+			}
+
 			os.Exit(0)
+
 		case "completion":
 			shell := "bash"
 			if len(args) > 1 {
@@ -456,10 +621,45 @@ func Run() error {
 			}
 			RunCompletion(shell)
 			os.Exit(0)
+
 		case "help":
 			printHelp()
 			os.Exit(0)
+
 		case "get":
+			if len(args) > 1 && args[1] == "secret" {
+				secretName, commandQuiet, err := parseGetSecretArgs(args[2:], quietMode)
+				if err != nil {
+					return err
+				}
+
+				dbPath := FindDBPath(*dbPathFlag)
+				if dbPath == "" {
+					return errors.New("DB not found")
+				}
+
+				if !commandQuiet {
+					fmt.Fprintf(os.Stderr, "[DB: %s]\n", dbPath)
+				}
+
+				password, err := ReadPasswordWithPrompt(!commandQuiet)
+				if err != nil {
+					return err
+				}
+
+				data, err := LoadKeePassData(dbPath, password)
+				if err != nil {
+					return err
+				}
+
+				value, err := findSecretValue(data.Entries, secretName)
+				if err != nil {
+					return err
+				}
+
+				fmt.Println(value)
+				os.Exit(0)
+			}
 			if len(args) > 1 && args[1] == "secrets" {
 				treeMode := false
 				showEmptyGroups := false
@@ -473,10 +673,6 @@ func Run() error {
 					default:
 						return fmt.Errorf("unknown option: %s", arg)
 					}
-				}
-
-				if showEmptyGroups && !treeMode {
-					return errors.New("--show-empty-groups requires --tree")
 				}
 
 				dbPath := FindDBPath(*dbPathFlag)
@@ -501,10 +697,14 @@ func Run() error {
 					os.Exit(0)
 				}
 
-				values := make([]string, 0, len(data.Entries))
+				values := make([]string, 0, len(data.Entries)+len(data.EmptyGroupPaths))
 
 				for _, entry := range data.Entries {
 					values = append(values, entry.Name)
+				}
+
+				if showEmptyGroups {
+					values = append(values, emptyGroupDisplayPaths(data.Entries, data.EmptyGroupPaths)...)
 				}
 
 				sort.Strings(values)
@@ -518,13 +718,11 @@ func Run() error {
 		}
 	}
 
-	// If no arguments - show status and exit
 	if len(args) == 0 {
 		printStatus(*dbPathFlag)
 		os.Exit(0)
 	}
 
-	// Validate docker compose
 	if !IsAllowedCommand(args) {
 		fmt.Fprintf(os.Stderr, "ERROR: Only 'docker compose' is supported\n")
 		fmt.Fprintf(os.Stderr, "\n")
@@ -532,7 +730,6 @@ func Run() error {
 		os.Exit(1)
 	}
 
-	// Validate compose subcommand
 	if !HasComposeSubcommand(args) {
 		fmt.Fprintf(os.Stderr, "ERROR: docker compose subcommand is required\n")
 		fmt.Fprintf(os.Stderr, "\n")
@@ -542,27 +739,22 @@ func Run() error {
 
 	dbPath := FindDBPath(*dbPathFlag)
 
-	// Silent find: no status output when executing command
 	if dbPath == "" {
 		fmt.Fprintf(os.Stderr, "ERROR: File .kdbx not found in configured locations\n")
 		os.Exit(1)
 	}
 
-	// Display which database is being used
 	fmt.Fprintf(os.Stderr, "[DB: %s]\n", dbPath)
 
-	// Prompt for password
 	password, err := ReadPassword()
 	if err != nil {
 		return err
 	}
 
-	// Load variables from .kdbx database
 	env, err := LoadKeePass(dbPath, password)
 	if err != nil {
 		return err
 	}
 
-	// Execute command with .kdbx variables passed only to subprocess
 	return RunCommand(args[0], args[1:], env)
 }

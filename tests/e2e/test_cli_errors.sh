@@ -59,10 +59,41 @@ expect_fail_stdin() {
     rm -f "$stdout_file" "$stderr_file"
 }
 
-expect_fail_stdin \
-    "show empty groups without tree" \
-    "--show-empty-groups requires --tree" \
+expect_success_stdin() {
+    local name="$1"
+    shift
+
+    stdout_file="$(mktemp)"
+    stderr_file="$(mktemp)"
+
+    if ! echo "sato" | "$@" >"$stdout_file" 2>"$stderr_file"; then
+        echo "FAIL: $name should have succeeded" >&2
+        cat "$stdout_file" >&2
+        cat "$stderr_file" >&2
+        rm -f "$stdout_file" "$stderr_file"
+        exit 1
+    fi
+}
+
+expect_success_stdin \
+    "show empty groups in list mode" \
     "$SATO_BIN" --db-path="$DB_PATH" get secrets --show-empty-groups
+
+if ! grep -q '^empty-group/$' "$stdout_file"; then
+    echo "FAIL: list mode should show empty-group/" >&2
+    cat "$stdout_file" >&2
+    rm -f "$stdout_file" "$stderr_file"
+    exit 1
+fi
+
+if ! grep -q '^test/empty-nested/$' "$stdout_file"; then
+    echo "FAIL: list mode should show test/empty-nested/" >&2
+    cat "$stdout_file" >&2
+    rm -f "$stdout_file" "$stderr_file"
+    exit 1
+fi
+
+rm -f "$stdout_file" "$stderr_file"
 
 expect_fail_stdin \
     "unknown get secrets option" \
@@ -86,3 +117,4 @@ expect_fail \
     "$SATO_BIN" kubectl get pods
 
 echo "PASS: CLI error paths work"
+

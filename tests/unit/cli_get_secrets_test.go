@@ -127,34 +127,33 @@ func TestCLIGetSecretsTree_ShowEmptyGroups(t *testing.T) {
 	}
 }
 
-func TestCLIGetSecretsShowEmptyGroupsRequiresTree(t *testing.T) {
+func TestCLIGetSecrets_ShowEmptyGroupsInListMode(t *testing.T) {
 	dbPath := createUnitKeePassDB(t)
 
-	cmd := exec.Command(
-		"go",
-		"run",
-		".",
+	stdout, _ := runSATO(
+		t,
 		"--db-path="+dbPath,
 		"get",
 		"secrets",
 		"--show-empty-groups",
 	)
-	cmd.Dir = projectRoot(t)
-	cmd.Stdin = strings.NewReader(testDBPassword + "\n")
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err == nil {
-		t.Fatalf("expected command to fail without --tree")
+	wantContains := []string{
+		"API_KEY",
+		"DB_PASSWORD",
+		"NGINX_PASSWORD",
+		"empty-group/",
+		"test/empty-nested/",
 	}
 
-	if !strings.Contains(stderr.String(), "--show-empty-groups requires --tree") {
-		t.Fatalf("stderr missing expected error; stderr:\n%s", stderr.String())
+	for _, item := range wantContains {
+		if !containsLine(stdout, item) {
+			t.Fatalf("stdout missing %q; stdout:\n%s", item, stdout)
+		}
+	}
+
+	if strings.Contains(stdout, "Secrets/") {
+		t.Fatalf("common top-level group should be stripped; stdout:\n%s", stdout)
 	}
 }
 

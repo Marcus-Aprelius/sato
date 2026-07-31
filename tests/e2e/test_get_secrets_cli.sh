@@ -53,4 +53,44 @@ for secret in DB_PASSWORD API_KEY; do
     fi
 done
 
-echo "PASS: get secrets stdout/stderr separation works"
+: >"$stdout_file"
+: >"$stderr_file"
+
+echo "sato" | "$SATO_BIN" --db-path="$DB_PATH" get secret DB_PASSWORD >"$stdout_file" 2>"$stderr_file"
+
+if [ "$(cat "$stdout_file")" != "super_secret_db_password_123" ]; then
+    echo "FAIL: get secret DB_PASSWORD returned unexpected value" >&2
+    cat "$stdout_file" >&2
+    exit 1
+fi
+
+if grep -q '\[DB:' "$stdout_file"; then
+    echo "FAIL: get secret stdout must not contain DB marker" >&2
+    cat "$stdout_file" >&2
+    exit 1
+fi
+
+if grep -q 'KeePass password' "$stdout_file"; then
+    echo "FAIL: get secret stdout must not contain password prompt" >&2
+    cat "$stdout_file" >&2
+    exit 1
+fi
+
+if ! grep -q '\[DB:' "$stderr_file"; then
+    echo "FAIL: get secret stderr must contain DB marker" >&2
+    cat "$stderr_file" >&2
+    exit 1
+fi
+
+if ! grep -q 'KeePass password:' "$stderr_file"; then
+    echo "FAIL: get secret stderr must contain password prompt" >&2
+    cat "$stderr_file" >&2
+    exit 1
+fi
+
+if echo "sato" | "$SATO_BIN" --db-path="$DB_PATH" get secret DOES_NOT_EXIST >/dev/null 2>&1; then
+    echo "FAIL: get secret DOES_NOT_EXIST should fail" >&2
+    exit 1
+fi
+
+echo "PASS: get secrets and get secret CLI output work"

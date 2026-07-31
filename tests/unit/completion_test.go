@@ -53,13 +53,12 @@ func TestCompletionContainsTopLevelCommands(t *testing.T) {
 	}
 }
 
-func TestCompletionContainsGetSecretsTreeFlags(t *testing.T) {
+func TestCompletionContainsGetSecretsFlags(t *testing.T) {
 	out := captureCompletion(t)
 
 	want := []string{
 		"compgen -W \"secrets\"",
-		"compgen -W \"--tree\"",
-		"compgen -W \"--show-empty-groups\"",
+		"compgen -W \"--tree --show-empty-groups\"",
 	}
 
 	for _, item := range want {
