@@ -76,7 +76,7 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
   | `sato get secrets --tree`                     | List secret names as a group tree                             |
   | `sato get secrets --tree --show-empty-groups` | List secret names as a group tree, including empty groups     |
   | `sato get secret <NAME>`                      | Show value of a secret                                        |
-  | `sato get secret <NAME> -q\|quite`            | Show value of a secret without any information (for scripts)  |
+  | `sato get secret <NAME> -q\|quite`             | Show value of a secret without any information (for scripts)  |
   | `sato docker compose <...>`                   | Run any Docker Compose command with passwords from `.kdbx` DB |
   | `sato docker compose up -d`                   | Example: start Docker containers in detached mode             |
 
