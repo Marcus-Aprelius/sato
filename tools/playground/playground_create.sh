@@ -2,8 +2,8 @@
 set -euo pipefail
 
 PLAYGROUND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$PLAYGROUND_DIR/.." && pwd)"
-DB_GENERATOR="$PROJECT_DIR/scripts/create_test_db.go"
+PROJECT_DIR="$(cd "$PLAYGROUND_DIR/../.." && pwd)"
+DB_GENERATOR="$PROJECT_DIR/tools/create_db/create_test_db.go"
 
 cd "$PLAYGROUND_DIR"
 
@@ -52,11 +52,7 @@ else
         exit 1
     fi
 
-    docker run --rm \
-        -v "$PROJECT_DIR:/src" \
-        -w /src/playground \
-        golang:1.26.5-alpine \
-        go run ../scripts/create_test_db.go
+    docker run --rm -v "$PROJECT_DIR:/src" -w /src/tools/playground golang:1.26.5-alpine go run ../create_db/create_test_db.go
 fi
 
 echo ""

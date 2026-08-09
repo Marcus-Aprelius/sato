@@ -14,17 +14,17 @@ rm -f "$REPORT_FILE"
     echo ""
 
     echo "=== Build sato binary ==="
-    bash scripts/build/create.sh bin
+    bash tools/build/create.sh bin
     echo ""
 
     echo "=== Create playground ==="
-    bash playground/playground_create.sh
+    bash tools/playground/playground_create.sh
     echo ""
 
     cleanup() {
         echo ""
         echo "=== Delete playground ==="
-        bash playground/playground_delete.sh
+        bash tools/playground/playground_delete.sh
     }
 
     trap cleanup EXIT

@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+PROJECT_DIR="$SCRIPT_DIR"
+while [ ! -f "$PROJECT_DIR/go.mod" ]; do
+    parent="$(dirname "$PROJECT_DIR")"
+
+    if [ "$parent" = "$PROJECT_DIR" ]; then
+        echo "ERROR: project root with go.mod not found" >&2
+        exit 1
+    fi
+
+    PROJECT_DIR="$parent"
+done
+
 REPORT_FILE="$PROJECT_DIR/tests/report_all_tests.txt"
 GO_IMAGE="golang:1.26.5-alpine"
 
@@ -21,6 +34,14 @@ run_go() {
             "$GO_IMAGE" \
             go "$@" 2> >(grep -v '^go: downloading ' >&2)
     fi
+}
+
+run_and_filter() {
+    set +e
+    "$@" 2>&1 | grep -v '^go: downloading '
+    local rc=${PIPESTATUS[0]}
+    set -e
+    return "$rc"
 }
 
 check_gofmt() {
@@ -135,6 +156,18 @@ print_summary_banner() {
         e2e_skipped="$(
             echo "$e2e_results" | sed -n 's/^Results: \([0-9]\+\) passed, \([0-9]\+\) failed, \([0-9]\+\) skipped/\3/p'
         )"
+
+        if [ -z "$e2e_passed" ]; then
+            e2e_passed="0"
+        fi
+
+        if [ -z "$e2e_failed" ]; then
+            e2e_failed="0"
+        fi
+
+        if [ -z "$e2e_skipped" ]; then
+            e2e_skipped="0"
+        fi
     fi
 
     if [ -f "$PROJECT_DIR/dist/sato" ]; then
@@ -149,7 +182,7 @@ print_summary_banner() {
 
     echo ""
     echo "============================================================"
-    echo " SATO TEST SUMMARY"
+    echo " TEST SUMMARY"
     echo "============================================================"
     echo ""
     echo "| Area          | Result | Details |"
@@ -183,11 +216,11 @@ print_summary_banner() {
     echo ""
 
     echo "=== Unit tests ==="
-    bash tests/run_unit_tests.sh 2>&1 | grep -v '^go: downloading '
+    run_and_filter bash tests/run_unit_tests.sh
     echo ""
 
     echo "=== E2E tests ==="
-    bash tests/run_e2e_tests.sh 2>&1 | grep -v '^go: downloading '
+    run_and_filter bash tests/run_e2e_tests.sh
     echo ""
 
     echo "All test suites completed successfully"

@@ -7,7 +7,7 @@ set -e
 SATO_BIN="${SATO_BIN:-$(cd "$(dirname "$0")/../.." && pwd)/dist/sato}"
 
 if [ ! -x "$SATO_BIN" ]; then
-    echo "SKIP: binary not found at $SATO_BIN (run scripts/build/create.sh first)" >&2
+    echo "SKIP: binary not found at $SATO_BIN (run tools/build/create.sh first)" >&2
     exit 77
 fi
 

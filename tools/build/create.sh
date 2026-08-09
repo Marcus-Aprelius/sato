@@ -6,31 +6,35 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_DIR"
 
 DIST_DIR="$PROJECT_DIR/dist"
+GIT_COMMIT=$(cd "$PROJECT_DIR" && git rev-parse --short=8 HEAD 2>/dev/null || echo "unknown")
 
 BINARY_NAME="sato"
 BUILDER_IMAGE="sato:builder"
 GO_IMAGE="golang:1.26.5-alpine"
 
-VERSION="0.0.3"
+VERSION="0.0.4"
 
 mkdir -p "$DIST_DIR"
 
 show_env() {
     echo "[Environment]"
-    echo "OS:      $(uname -srm)"
+    echo "Destination: $DIST_DIR"
+    echo "OS:          $(uname -srm)"
 
     if command -v docker >/dev/null 2>&1; then
-        echo "Docker:  $(docker --version)"
+        echo "Docker:      $(docker --version)"
     else
-        echo "Docker:  NOT INSTALLED" >&2
+        echo "Docker:      NOT INSTALLED" >&2
         exit 1
     fi
 
     if command -v git >/dev/null 2>&1; then
-        echo "Git:     $(git --version | awk '{print $3}')"
+        echo "Git:         $(git --version | awk '{print $3}')"
     fi
 
-    echo "Go:      $GO_IMAGE"
+    echo "Go:          $GO_IMAGE"
+    echo "Version:     $VERSION"
+    echo "Git commit:  $GIT_COMMIT"
     echo ""
 }
 
@@ -38,32 +42,33 @@ build_bin() {
     show_env
 
     echo "[Building SATO]"
-    echo "Project directory: $PROJECT_DIR"
     echo ""
 
-    GIT_COMMIT=$(
-        cd "$PROJECT_DIR" &&
-        git rev-parse --short=8 HEAD 2>/dev/null ||
-        echo "unknown"
-    )
+    GIT_COMMIT=$(cd "$PROJECT_DIR" && git rev-parse --short=8 HEAD 2>/dev/null || echo "unknown")
 
     echo "Building Docker image..."
 
-    docker build \
+    BUILD_LOG="$(mktemp)"
+
+    if ! DOCKER_BUILDKIT=1 docker build \
         --build-arg VERSION="$VERSION" \
         --build-arg GIT_COMMIT="$GIT_COMMIT" \
         --target builder \
         -t "$BUILDER_IMAGE" \
-        "$PROJECT_DIR"
+        "$PROJECT_DIR" >"$BUILD_LOG" 2>&1; then
+        echo "Docker build failed" >&2
+        cat "$BUILD_LOG" >&2
+        rm -f "$BUILD_LOG"
+        exit 1
+    fi
+
+    rm -f "$BUILD_LOG"
 
     echo "Extracting binary..."
 
     CONTAINER_ID=$(docker create "$BUILDER_IMAGE")
 
-    docker cp \
-        "$CONTAINER_ID:/out/$BINARY_NAME" \
-        "$DIST_DIR/$BINARY_NAME"
-
+    docker cp "$CONTAINER_ID:/out/$BINARY_NAME" "$DIST_DIR/$BINARY_NAME"
     docker rm "$CONTAINER_ID" >/dev/null
 
     if [ ! -f "$DIST_DIR/$BINARY_NAME" ]; then
@@ -71,13 +76,12 @@ build_bin() {
         exit 1
     fi
 
-    SIZE=$(du -h "$DIST_DIR/$BINARY_NAME" | cut -f1)
+    # SIZE=$(du -h "$DIST_DIR/$BINARY_NAME" | cut -f1)
 
     echo ""
     echo "Build successful"
-    echo "Binary : $DIST_DIR/$BINARY_NAME"
-    echo "Size   : $SIZE"
-    echo "Commit : $GIT_COMMIT"
+    echo "Binary: $DIST_DIR/$BINARY_NAME"
+    echo "Size:   $(du -h "$DIST_DIR/$BINARY_NAME" | cut -f1)"
     echo ""
 }
 
@@ -105,14 +109,8 @@ build_deb_package() {
         trap cleanup_deb EXIT
 
         rm -rf "$PKG_DIR"
-
-        mkdir -p \
-            "$PKG_DIR/usr/local/bin" \
-            "$PKG_DIR/DEBIAN"
-
-        cp \
-            "$DIST_DIR/$BINARY_NAME" \
-            "$PKG_DIR/usr/local/bin/sato"
+        mkdir -p "$PKG_DIR/usr/local/bin" "$PKG_DIR/DEBIAN"
+        cp "$DIST_DIR/$BINARY_NAME" "$PKG_DIR/usr/local/bin/sato"
 
         cat > "$PKG_DIR/DEBIAN/control" <<EOF
 Package: sato
@@ -140,9 +138,11 @@ EOF
             exit 1
         fi
 
-        echo ""
-        echo "Created:"
-        echo "  $DIST_DIR/sato_${VERSION}_amd64.deb"
+            echo ""
+        echo "DEB package: $DIST_DIR/sato_${VERSION}_amd64.deb"
+        # SIZE=$(du -h "$DIST_DIR/sato_${VERSION}_amd64.deb" | cut -f1)
+        echo "Size:        $(du -h "$DIST_DIR/sato_${VERSION}_amd64.deb" | cut -f1)"
+
     )
 }
 
@@ -165,15 +165,8 @@ build_rpm_package() {
 
         rm -rf "$PKG_DIR"
 
-        mkdir -p \
-            "$PKG_DIR/BUILD" \
-            "$PKG_DIR/RPMS" \
-            "$PKG_DIR/SOURCES" \
-            "$PKG_DIR/SPECS" \
-            "$PKG_DIR/SRPMS"
-
-        cp "$DIST_DIR/$BINARY_NAME" \
-           "$PKG_DIR/SOURCES/sato"
+        mkdir -p "$PKG_DIR/BUILD" "$PKG_DIR/RPMS" "$PKG_DIR/SOURCES" "$PKG_DIR/SPECS" "$PKG_DIR/SRPMS"
+        cp "$DIST_DIR/$BINARY_NAME" "$PKG_DIR/SOURCES/sato"
 
         cat > "$PKG_DIR/SPECS/sato.spec" <<EOF
 Name: sato
@@ -199,8 +192,11 @@ EOF
             -v "$DIST_DIR/rpm:/root/rpmbuild" \
             rockylinux:9 \
             bash -c '
-                dnf install -y rpm-build >/dev/null &&
-                rpmbuild -bb /root/rpmbuild/SPECS/sato.spec &&
+                dnf -qy install rpm-build >/dev/null 2>&1 &&
+                rpmbuild --quiet -bb /root/rpmbuild/SPECS/sato.spec >/tmp/rpmbuild.log 2>&1 || {
+                    cat /tmp/rpmbuild.log
+                    exit 1
+                }
                 chown -R '"$HOST_UID:$HOST_GID"' /root/rpmbuild
             '
 
@@ -214,8 +210,8 @@ EOF
         cp "$RPM_FILE" "$DIST_DIR/"
 
         echo ""
-        echo "Created RPM package:"
-        ls -1 "$DIST_DIR"/*.rpm
+        echo "RPM package: $DIST_DIR/*.rpm"
+        echo "Size:        $(du -h "$DIST_DIR"/*.rpm | cut -f1)"
     )
 }
 

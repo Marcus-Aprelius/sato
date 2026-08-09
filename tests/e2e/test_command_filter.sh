@@ -7,7 +7,7 @@ set -e
 SATO_BIN="${SATO_BIN:-$(cd "$(dirname "$0")/../.." && pwd)/dist/sato}"
 
 if [ ! -x "$SATO_BIN" ]; then
-    echo "SKIP: binary not found at $SATO_BIN (run scripts/build/create.sh bin first)" >&2
+    echo "SKIP: binary not found at $SATO_BIN (run tools/build/create.sh bin first)" >&2
     exit 77
 fi
 
@@ -33,6 +33,16 @@ fi
 
 if "$SATO_BIN" docker compose >/dev/null 2>&1; then
     echo "FAIL: 'sato docker compose' without subcommand should have been rejected" >&2
+    exit 1
+fi
+
+if "$SATO_BIN" git status >/dev/null 2>&1; then
+    echo "FAIL: 'sato git s*atus' should have been rejected" >&2
+    exit 1
+fi
+
+if "$SATO_BIN" gi* config --global user.name test >/dev/null 2>&1; then
+    echo "FAIL: 'sato git config' should have been rejected" >&2
     exit 1
 fi
 

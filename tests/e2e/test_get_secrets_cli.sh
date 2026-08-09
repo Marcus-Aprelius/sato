@@ -3,10 +3,10 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 SATO_BIN="${SATO_BIN:-$PROJECT_DIR/dist/sato}"
-DB_PATH="$PROJECT_DIR/playground/secrets.kdbx"
+DB_PATH="$PROJECT_DIR/tools/playground/secrets.kdbx"
 
 if [ ! -x "$SATO_BIN" ]; then
-    echo "SKIP: binary not found at $SATO_BIN (run scripts/build/create.sh bin first)" >&2
+    echo "SKIP: binary not found at $SATO_BIN (run tools/build/create.shin first)" >&2
     exit 77
 fi
 
@@ -84,6 +84,40 @@ fi
 
 if ! grep -q 'KeePass password:' "$stderr_file"; then
     echo "FAIL: get secret stderr must contain password prompt" >&2
+    cat "$stderr_file" >&2
+    exit 1
+fi
+
+: >"$stdout_file"
+: >"$stderr_file"
+
+echo "sato" | "$SATO_BIN" --db-path="$DB_PATH" get secret DB_PASSWORD -q >"$stdout_file" 2>"$stderr_file"
+
+if [ "$(cat "$stdout_file")" != "super_secret_db_password_123" ]; then
+    echo "FAIL: get secret DB_PASSWORD -q returned unexpected value" >&2
+    cat "$stdout_file" >&2
+    exit 1
+fi
+
+if [ -s "$stderr_file" ]; then
+    echo "FAIL: get secret -q stderr must be empty" >&2
+    cat "$stderr_file" >&2
+    exit 1
+fi
+
+: >"$stdout_file"
+: >"$stderr_file"
+
+echo "sato" | "$SATO_BIN" --db-path="$DB_PATH" get secret DB_PASSWORD --quiet >"$stdout_file" 2>"$stderr_file"
+
+if [ "$(cat "$stdout_file")" != "super_secret_db_password_123" ]; then
+    echo "FAIL: get secret DB_PASSWORD --quiet returned unexpected value" >&2
+    cat "$stdout_file" >&2
+    exit 1
+fi
+
+if [ -s "$stderr_file" ]; then
+    echo "FAIL: get secret --quiet stderr must be empty" >&2
     cat "$stderr_file" >&2
     exit 1
 fi

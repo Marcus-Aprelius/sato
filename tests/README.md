@@ -1,5 +1,5 @@
 # Tests
-Tests for the `SATO` project use [playground](../playground/README.md) for their own purposes.
+Tests for the `SATO` project use [playground](../tools/playground/README.md) for their own purposes.
 
 There is an ability to trigger all tests at once and get results to the file `report_all_tests.txt`
 

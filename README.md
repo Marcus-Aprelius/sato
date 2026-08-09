@@ -2,14 +2,20 @@
 
 > **`sato`** — like `sudo`, but for secrets
 
-`sato` loads secrets from secure KeePass-compatible `.kdbx` database (DB) and runs **`docker compose`** commands using those variables (secrets). Secrets are not exposed to the shell or written to disk in such case.
+`sato` loads secrets from secure KeePass-compatible `.kdbx` database (DB) for usage in:
+  * **`docker compose`**
+  * **`git`**
+
+commands to use those variables (secrets). Secrets are not exposed to the shell or written to disk in such case.
+
+See also [VSCode extention SATO secrets](https://marketplace.visualstudio.com/items?itemName=MarcusApreliusAntoninus.sato-vscode-ext) for working with `.kdbx` database (DB).
 
 
 ## How It Works
 1. `sato` searches for a `.kdbx` DB in predefined locations or paths specified by the user. Once a valid DB is found, it is used as the source of secrets. 
 Additionally, `sato` can safely display secrets' names from the DB (`sato get secrets`).
 
-2. `sato` reads the DB's master password and uses its secrets to run `docker compose` commands. Password input is not echoed to the terminal and secrets are passed only to child process, never exported to shell or written to temporary files.
+2. `sato` reads the DB's master password and uses its secrets to run `docker compose ...`, `sato git ...` commands. Password input is not echoed to the terminal and secrets are passed only to child process, never exported to shell or written to temporary files.
   <img src="assets/compare.jpg" alt="compare">
 
 <p><strong><span style="color:red">⚠ Pay Attention!</span></strong></p>
@@ -27,8 +33,8 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
 [![Docker Compose](https://img.shields.io/badge/Compose-2.4-1D63ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/install/linux)
 
 [![Binary](https://img.shields.io/badge/Binary-file-success)](https://github.com/Marcus-Aprelius/sato/releases/latest/download/sato)
-[![DEB](https://img.shields.io/badge/DEB-package-C71585?logo=debian&logoColor=red)](https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.3/sato_0.0.3_amd64.deb)
-[![RPM](https://img.shields.io/badge/RPM-package-EE0000?logo=redhat&logoColor=red)](https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.3/sato-0.0.3-1.x86_64.rpm)
+[![DEB](https://img.shields.io/badge/DEB-package-C71585?logo=debian&logoColor=red)](https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.4/sato_0.0.4_amd64.deb)
+[![RPM](https://img.shields.io/badge/RPM-package-EE0000?logo=redhat&logoColor=red)](https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.4/sato-0.0.4-1.x86_64.rpm)
 
 ---
 
@@ -48,12 +54,12 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
 
   * from `.deb` package:
     ```bash
-    wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.3/sato_0.0.3_amd64.deb && sudo dpkg -i sato_0.0.3_amd64.deb
+    wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.4/sato_0.0.4_amd64.deb && sudo dpkg -i sato_0.0.4_amd64.deb
     ```
 
   * from `.rpm` package:
     ```bash
-    wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.3/sato-0.0.3-1.x86_64.rpm && sudo yum install -y sato-0.0.3-1.x86_64.rpm
+    wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.4/sato-0.0.4-1.x86_64.rpm && sudo yum install -y sato-0.0.4-1.x86_64.rpm
     ```
 
 ---
@@ -61,24 +67,32 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
 ## Flags and Commands:
 
 * Flags:
-  | Flag           | Description                         |
-  |----------------|-------------------------------------|  
-  | --db-path=PATH | Path to KeePass-compatible .kdbx DB |
+  | Flag            | Description                           |
+  |-----------------|---------------------------------------|
+  | --secret <NAME> | Name of the secret for `sato git ...` | 
+  | --db-path=PATH  | Path to KeePass-compatible .kdbx DB   |
 
 * Commands:
-  | Command                                       | Description                                                   |
-  |-----------------------------------------------|---------------------------------------------------------------|
-  | `sato`                                        | Show current status                                           |
-  | `sato version`                                | Show version                                                  |
-  | `sato help`                                   | Show help                                                     |
-  | `sato completion bash`                        | Show Bash completion scripts                                  |
-  | `sato get secrets`                            | List secret names from a KeePass-compatible `.kdbx` DB        |
-  | `sato get secrets --tree`                     | List secret names as a group tree                             |
-  | `sato get secrets --tree --show-empty-groups` | List secret names as a group tree, including empty groups     |
-  | `sato get secret <NAME>`                      | Show value of a secret                                        |
-  | `sato get secret <NAME> -q\|quite`             | Show value of a secret without any information (for scripts)  |
-  | `sato docker compose <...>`                   | Run any Docker Compose command with passwords from `.kdbx` DB |
-  | `sato docker compose up -d`                   | Example: start Docker containers in detached mode             |
+  | Command                                            | Description                                                   |
+  |----------------------------------------------------|---------------------------------------------------------------|
+  | `sato`                                             | Show current status                                           |
+  | `sato help`                                        | Show help                                                     |
+  | `sato version`                                     | Show version                                                  |
+  | `sato completion bash`                             | Show Bash completion script                                   |
+  | `sato completion bash add\|delete\|update\|status` | Add/delete update or show status of Bash completion script    |
+  ||| 
+  | `sato get secrets`                                 | List secret names from a KeePass-compatible `.kdbx` DB        |
+  | `sato get secrets --tree`                          | List secret names as a group tree                             |
+  | `sato get secrets --tree --show-empty-groups`      | List secret names as a group tree, including empty groups     |
+  | `sato get secret <NAME>`                           | Show value of a secret                                        |
+  | `sato get secret <NAME> -q\|quite`                 | Show value of a secret without any information (for scripts)  |
+  ||| 
+  | `sato docker compose <...>`                        | Run any Docker Compose command with passwords from `.kdbx` DB |
+  | `sato docker compose up -d`                        | Example: start Docker containers in detached mode             |
+  | `sato docker help`                                 | Show docker command help                                      |
+  ||| 
+  | `sato git clone <URL>`                             | Clone git repository with a secret (TOKEN) from `.kdbx` DB    |
+  | `git help`                                         | Show git command help                                         |
 
 ---
 
@@ -110,7 +124,20 @@ Enable tab completion for `sato` commands:
   ```
 * permanently:
   ```bash
-  sato completion bash >> ~/.bashrc && source ~/.bashrc 
+  echo "source <(/usr/local/bin/sato completion bash)" >> ~/.bashrc && source ~/.bashrc
+  ```
+  or with checks:
+  ```bash
+  if command -v sato >/dev/null 2>&1; then
+    sato completion bash > ~/.sato-completion.bash &&
+    (grep -qxF 'source ~/.sato-completion.bash' ~/.bashrc || 
+    echo 'source ~/.sato-completion.bash' >> ~/.bashrc) &&
+    source ~/.bashrc
+  fi
+  ```
+  or using `sato`:
+  ```bash
+  sato completion bash add && source ~/.bashrc
   ```
 
 ---
@@ -122,27 +149,28 @@ It's not a requirement, rather a `general recommendation` that all development t
 | Development with | Reccomended for                                                                                                               |
 |------------------|-------------------------------------------------------------------------------------------------------------------------------|
 | `devcontainer`   | - development and fast checks<br>- coding, formatting, tests, `go vet`<br>- quick CLI commands (without build) |
-| Docker image     | - release/build process<br>- scripts/build/create.sh                                                                          |
+| Docker image     | - release/build process<br>- tools/build/create.sh                                                                          |
 
 Examples of scripts:
 
-| Devcontainers                                                         | Docker Images                                                 |
-|-----------------------------------------------------------------------|---------------------------------------------------------------|
-| **1. Format Go code:**<br>`gofmt -w internal/sato/*.go tests/unit/*.go`<br>  | **1. Official release build:**<br>`bash scripts/build/create.sh bin` |
-| **2. Quick Go tests:**<br>`go test ./...`<br>`go vet ./...`<br>`go mod tidy` | **2. Package builds:**<br>`bash scripts/build/create.sh deb`<br>`bash scripts/build/create.sh rpm`<br>`bash scripts/build/create.sh all` |
-| **3. Work with playground files:**<br>`bash playground/playground_create.sh`<br>`bash playground/playground_delete.sh`  | **3. Final pre-release verification on host:**<br>`bash tests/run_all_tests.sh`<br>`bash scripts/build/create.sh all`                         |
-| **4. `sato` CLI commands:**<br>`go run . help`<br>`go run . version`                                                    | |
-| **5. Work with playground files:**<br>`bash playground/playground_create.sh`<br>`bash playground/playground_delete.sh` | |
-| **6. Tests:**<br>`bash tests/run_unit_tests.sh`<br>`bash tests/run_e2e_tests.sh`<br>`bash tests/run_all_tests.sh`       | |
-| **7. Docker / Docker Compose checks**<br>`docker version`<br>`docker compose version`                                   | |
-
+| Devcontainers                                                                | Docker Image                                                  |
+|------------------------------------------------------------------------------|---------------------------------------------------------------|
+| **1. Format Go code:**<br>`gofmt -w internal/sato/*.go tests/unit/*.go`<br>  | **1. Official release build:**<br>`bash create.sh bin`        |
+| **2. Quick Go tests:**<br>`go test ./...`<br>`go vet ./...`<br>`go mod tidy` | **2. Package builds:**<br>`bash create.sh deb`<br>`bash create.sh rpm`<br>`bash create.sh all` |
+| **3. Work with playground files:**<br>`bash playground_create.sh`<br>`bash playground_delete.sh`    | **3. Final pre-release verification on host:**<br>`bash run_all_tests.sh`<br>`bash create.sh all`                                            |
+| **4. `sato` CLI commands:**<br>`go run . help`<br>`go run . version`                              | |
+| **5. Work with playground files:**<br>`bash playground_create.sh`<br>`bash playground_delete.sh`  | |
+| **6. Tests:**<br>`bash run_unit_tests.sh`<br>`bash run_e2e_tests.sh`<br>`bash run_all_tests.sh`   | |
+| **7. Docker / Docker Compose checks**<br>`docker version`<br>`docker compose version`             | |
 
 ## Playground and Testing
 
-See [playground](playground/README.md) and [tests](tests/README.md) for the details.
+See [playground](tools/playground/README.md) and [tests](tests/README.md) for the details.
 
 ---
 
 [Apache License 2.0](LICENSE)
 
-© 2026 [Marcus-Aprelius](https://github.com/Marcus-Aprelius/sato)
+© 2026 **[Marcus-Aprelius](https://github.com/Marcus-Aprelius/sato)**
+
+**Discord:** Marcus.Aprelius.Antoninus
