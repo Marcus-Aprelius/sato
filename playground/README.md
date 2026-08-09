@@ -31,7 +31,7 @@ If files are present, it will reacreate them.
 
 ## Usage
 
-Run any `docker compose` command:
+Run any `sato docker compose` command:
 
 * with secrets loaded from KeePass:
   ```bash
@@ -44,19 +44,19 @@ Run any `docker compose` command:
   sato docker compose config
   ```
 
-Examples - list secret names:
+**Examples:**
 
-* as a list
+* list secret names as a list
   ```bash
   sato --db-path=secrets.kdbx get secrets
   ```
 
-* as a group tree:
+* list secret names as a group tree:
   ```bash
   sato --db-path=secrets.kdbx get secrets --tree
   ```
 
-* as a group tree with an empty groups:
+* list secret names as a group tree with an empty groups:
   ```bash
   sato --db-path=secrets.kdbx get secrets --tree --show-empty-groups
   ```
