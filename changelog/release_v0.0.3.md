@@ -21,8 +21,6 @@ This release makes some small improvements. See below for more details.
   - `sato help` button  refactored
   - README.md files updated
   
-**Fixed:**
-
 ---
 
 # Test results:
