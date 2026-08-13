@@ -2,49 +2,51 @@
 
 > **`sato`** — like `sudo`, but for secrets
 
-`sato` loads secrets from secure KeePass-compatible `.kdbx` database (DB) for usage in:
-  * **`docker compose`**
-  * **`git`**
+`sato` loads secrets from supported encrypted vaults (`.kdbx`, `.psafe3`, `.ibak`) and securely provides them to supported **Docker Compose** and **Git** commands.
 
-commands to use those variables (secrets). Secrets are not exposed to the shell or written to disk in such case.
+`SATO` does not export secrets to the current shell or write secret values to disk.
 
-See also [VSCode extention SATO secrets](https://marketplace.visualstudio.com/items?itemName=MarcusApreliusAntoninus.sato-vscode-ext) for working with `.kdbx` database (DB).
-
+> Utility `sato` is provided **"as is"** and its usage in a production environment is fully **at your own risk**!
 
 ## How It Works
-1. `sato` searches for a `.kdbx` DB in predefined locations or paths specified by the user. Once a valid DB is found, it is used as the source of secrets. 
+1. `sato` searches for a [supported encrypted vault](#supported-formats) in predefined locations or paths specified by the user. Once a valid vault is found, it is used as the source of secrets.
 Additionally, `sato` can safely display secrets' names from the DB (`sato get secrets`).
 
-2. `sato` reads the DB's master password and uses its secrets to run `docker compose ...`, `sato git ...` commands. Password input is not echoed to the terminal and secrets are passed only to child process, never exported to shell or written to temporary files.
+2. `sato` reads the DB's master password and uses its secrets to run `docker compose ...`, `sato git ...` commands. Password input is not echoed to the terminal and secrets are passed only to the child process, never exported to shell or written to temporary files.
   <img src="assets/compare.jpg" alt="compare">
-
-<p><strong><span style="color:red">⚠ Pay Attention!</span></strong></p>
-
-Utility `sato` is provided **"as is"** and its usage in a production environment is fully **at your own risk**!
 
 ---
 
 [![Release](https://img.shields.io/github/v/release/Marcus-Aprelius/sato)](https://github.com/Marcus-Aprelius/sato/releases)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://go.dev/dl)
+[![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go)](https://go.dev/dl)
 [![Git](https://img.shields.io/badge/git-2.55-F05032?logo=git&logoColor=orange)](https://git-scm.com/install/linux)
 [![KeePassXC](https://img.shields.io/badge/KeePassXC-2.7-8A2BE2?logo=letsencrypt&logoColor=yellow)](https://keepassxc.org/download/#linux)
-[![Docker](https://img.shields.io/badge/Docker-29.1-2496ED?logo=docker&logoColor=blue)](https://docs.docker.com/engine/install)
-[![Docker Compose](https://img.shields.io/badge/Compose-2.4-1D63ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/install/linux)
+[![Docker](https://img.shields.io/badge/Docker-29.7-2496ED?logo=docker&logoColor=blue)](https://docs.docker.com/engine/install)
+[![Docker Compose](https://img.shields.io/badge/Compose-5.5-1D63ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/install/linux)
 
 [![Binary](https://img.shields.io/badge/Binary-file-success)](https://github.com/Marcus-Aprelius/sato/releases/latest/download/sato)
-[![DEB](https://img.shields.io/badge/DEB-package-C71585?logo=debian&logoColor=red)](https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.4/sato_0.0.4_amd64.deb)
-[![RPM](https://img.shields.io/badge/RPM-package-EE0000?logo=redhat&logoColor=red)](https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.4/sato-0.0.4-1.x86_64.rpm)
+[![DEB](https://img.shields.io/badge/DEB-package-C71585?logo=debian&logoColor=red)](https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.5/sato_0.0.5_amd64.deb)
+[![RPM](https://img.shields.io/badge/RPM-package-EE0000?logo=redhat&logoColor=red)](https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.5/sato-0.0.5-1.x86_64.rpm)
 
 ---
 
+## Supported formats
+
+| Encrypted Vaults | Description               |
+|------------------|---------------------------|
+| `.kdbx`          | KeePass 2 database        | 
+| `.psafe3`        | Password Safe V3 database |
+| `.ibak`          | Password Safe V3 backup   |
+
+---
 ## Installation
 
 ### Prerequisites
 
 * **required**: OS Linux | [docker](https://docs.docker.com/engine/install/) | [docker compose](https://docs.docker.com/compose/install/linux)
 
-* **optional**: [keepassxc](https://keepassxc.org/download/#linux) | [git](https://git-scm.com/install/linux) | [go](https://go.dev/doc/install) |  [manually build bin/rpm/deb files](scripts/build/README.md)
+* **optional**: [keepassxc](https://keepassxc.org/download/#linux) | [git](https://git-scm.com/install/linux) | [go](https://go.dev/doc/install) |  [manually build bin/rpm/deb files](tools/build/README.md)
 
 ### Install `sato`:
   * from `binary` file:
@@ -54,12 +56,12 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
 
   * from `.deb` package:
     ```bash
-    wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.4/sato_0.0.4_amd64.deb && sudo dpkg -i sato_0.0.4_amd64.deb
+    wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.5/sato_0.0.5_amd64.deb && sudo dpkg -i sato_0.0.5_amd64.deb
     ```
 
   * from `.rpm` package:
     ```bash
-    wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.4/sato-0.0.4-1.x86_64.rpm && sudo yum install -y sato-0.0.4-1.x86_64.rpm
+    wget https://github.com/Marcus-Aprelius/sato/releases/download/v0.0.5/sato-0.0.5-1.x86_64.rpm && sudo yum install -y sato-0.0.5-1.x86_64.rpm
     ```
 
 ---
@@ -67,42 +69,43 @@ Utility `sato` is provided **"as is"** and its usage in a production environment
 ## Flags and Commands:
 
 * Flags:
-  | Flag            | Description                           |
-  |-----------------|---------------------------------------|
-  | --secret <NAME> | Name of the secret for `sato git ...` | 
-  | --db-path=PATH  | Path to KeePass-compatible .kdbx DB   |
+  | Flag             | Description                                                          |
+  |------------------|----------------------------------------------------------------------|
+  | --secret=<NAME>  | Name of the secret for `sato git ...`                                |
+  | --db-path=<PATH> | Path to a database ([supported encrypted vault](#supported-formats)) |
 
 * Commands:
-  | Command                                            | Description                                                   |
-  |----------------------------------------------------|---------------------------------------------------------------|
-  | `sato`                                             | Show current status                                           |
-  | `sato help`                                        | Show help                                                     |
-  | `sato version`                                     | Show version                                                  |
-  | `sato completion bash`                             | Show Bash completion script                                   |
-  | `sato completion bash add\|delete\|update\|status` | Add/delete update or show status of Bash completion script    |
-  ||| 
-  | `sato get secrets`                                 | List secret names from a KeePass-compatible `.kdbx` DB        |
-  | `sato get secrets --tree`                          | List secret names as a group tree                             |
-  | `sato get secrets --tree --show-empty-groups`      | List secret names as a group tree, including empty groups     |
-  | `sato get secret <NAME>`                           | Show value of a secret                                        |
-  | `sato get secret <NAME> -q\|quite`                 | Show value of a secret without any information (for scripts)  |
-  ||| 
-  | `sato docker compose <...>`                        | Run any Docker Compose command with passwords from `.kdbx` DB |
-  | `sato docker compose up -d`                        | Example: start Docker containers in detached mode             |
-  | `sato docker help`                                 | Show docker command help                                      |
-  ||| 
-  | `sato git clone <URL>`                             | Clone git repository with a secret (TOKEN) from `.kdbx` DB    |
-  | `git help`                                         | Show git command help                                         |
+  | Command                                                      | Description                                                          |
+  |--------------------------------------------------------------|----------------------------------------------------------------------|
+  | `sato`                                                       | Show current status                                                  |
+  | `sato help`                                                  | Show help                                                            |
+  | `sato version`                                               | Show version                                                         |
+  | `sato completion bash`                                       | Show Bash completion script                                          |
+  | `sato completion bash add\|delete\|update\|status`           | Add/delete update or show status of Bash completion script           |
+  |||          
+  | `sato get secrets`                                           | List secret names from Secret database (`.kdbx`, `.psafe3`, `.ibak`) |
+  | `sato get secrets --tree`                                    | List secret names as a group tree                                    |
+  | `sato get secrets --tree --show-empty-groups`                | List secret names as a group tree, including empty groups            |
+  | `sato get secret <NAME>`                                     | Show value of a secret                                               |
+  | `sato get secret <NAME> -q\|quite`                           | Show value of a secret without any information (for scripts)         |
+  |||
+  | `sato docker compose <...>`                                  | Run any Docker Compose command with secrets from the configured vault        |
+  | `sato docker compose up -d`                                  | Example: start Docker containers in detached mode                            |
+  | `sato docker git help`                                       | Show SATO docker help                                                        |
+  |||
+  | `sato git clone\|push\|pull\|fetch`                          | Run allowed git command with a secret (TOKEN) from from the configured vault |
+  | `sato git clone https://github.com/Marcus-Aprelius/sato.git` | Example: clone a repository using a vault secret                             |
+  | `sato git help`                                              | Show SATO git help                                                           |
 
 ---
 
-## DB Locations Priority
+## Database Location Priority
 
-| Priority    | Source/Location                   | Comment                                                           |
-|-------------|-----------------------------------|-------------------------------------------------------------------|
-| 1 (highest) | `--db-path=/path/to/secrets.kdbx` | **Specify DB location manually:**<br>if `set` - is used, ignores locations with lower priority<br>if `not set` - finds other locations                 |
-| 2           | `~/.sato/secrets.kdbx`            | **Default location of the DB:**<br>if `present` - is used, ignores location with lower priority<br>if `absent`  - finds other locations                 |
-| 3 (lowest)  | `SATO_DB_PATH`                    | **ENV variable:** (i.e.: `export SATO_DB_PATH=/path/to/secrets.kdbx`)<br>if `set`     - is used<br>if `not set` - finds other locations |                                          |
+| Priority    | Source/Location                                 | Comment                                                           |
+|-------------|-------------------------------------------------|-------------------------------------------------------------------|
+| 1 (highest) | `--db-path=/path/to/secrets.{kdbx,psafe3,ibak}` | **Specify DB location manually:**<br>if `set` - is used, ignores locations with lower priority<br>if `not set` - finds other locations                 |
+| 2           | `~/.sato/*.{kdbx,psafe3,ibak}`                  | **Default location of the DB:**<br>if `present` - is used, ignores location with lower priority<br>if `absent`  - finds other locations                 |
+| 3 (lowest)  | `SATO_DB_PATH`                                  | **ENV variable:** (i.e.: `export SATO_DB_PATH=/path/to/secrets.{kdbx,psafe3,ibak}`)<br>if `set`     - is used<br>if `not set` - finds other locations |                                          |
 
 <span style="color:orange">! Pay attention !</span>
 
@@ -171,6 +174,8 @@ See [playground](tools/playground/README.md) and [tests](tests/README.md) for th
 
 [Apache License 2.0](LICENSE)
 
-© 2026 **[Marcus-Aprelius](https://github.com/Marcus-Aprelius/sato)**
+[VS Code extention SATO secrets](https://marketplace.visualstudio.com/items?itemName=MarcusApreliusAntoninus.sato-vscode-ext) allows work with Vaults and Crypto files.
 
 **Discord:** Marcus.Aprelius.Antoninus
+
+© 2026 **[Marcus-Aprelius](https://github.com/Marcus-Aprelius/sato)**

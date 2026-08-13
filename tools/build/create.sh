@@ -10,9 +10,9 @@ GIT_COMMIT=$(cd "$PROJECT_DIR" && git rev-parse --short=8 HEAD 2>/dev/null || ec
 
 BINARY_NAME="sato"
 BUILDER_IMAGE="sato:builder"
-GO_IMAGE="golang:1.26.5-alpine"
+GO_IMAGE="golang:1.26.7-alpine"
 
-VERSION="0.0.4"
+VERSION="0.0.5"
 
 mkdir -p "$DIST_DIR"
 

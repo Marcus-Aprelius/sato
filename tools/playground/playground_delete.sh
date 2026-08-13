@@ -16,6 +16,8 @@ rm -f .env
 rm -f test_script.sh
 rm -f run_test.sh
 rm -f secrets.kdbx
+rm -f secrets.psafe3
+rm -f secrets.ibak
 
 echo ""
 echo "Removed if existed:"
@@ -25,6 +27,8 @@ echo "  .env"
 echo "  test_script.sh"
 echo "  run_test.sh"
 echo "  secrets.kdbx"
+echo "  secrets.psafe3"
+echo "  secrets.ibak"
 echo ""
 
 echo "Kept:"

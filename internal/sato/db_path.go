@@ -8,18 +8,27 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// FindKDBX returns the first *.kdbx file found in dir, or "".
-func FindKDBX(dir string) string {
-	matches, err := filepath.Glob(filepath.Join(dir, "*.kdbx"))
-	if err != nil || len(matches) == 0 {
-		return ""
+// FindSecretDB returns the first supported secret database found in dir.
+func FindSecretDB(dir string) string {
+	patterns := []string{
+		"*.kdbx",
+		"*.psafe3",
+		"*.ibak",
 	}
-	return matches[0]
+
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(filepath.Join(dir, pattern))
+		if err == nil && len(matches) > 0 {
+			return matches[0]
+		}
+	}
+
+	return ""
 }
 
 // FindDBPath resolves the KeePass-compatible .kdbx database path using the priority order:
 //  1. --db-path flag
-//  2. ~/.sato/*.kdbx
+//  2. ~/.sato/*
 //  3. SATO_DB_PATH environment variable
 //
 // Returns "" if none is available.
@@ -32,7 +41,7 @@ func FindDBPath(dbPathFlag string) string {
 
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
-		if p := FindKDBX(filepath.Join(homeDir, ".sato")); p != "" {
+		if p := FindSecretDB(filepath.Join(homeDir, ".sato")); p != "" {
 			return p
 		}
 	}
@@ -65,7 +74,7 @@ func satoLocalStatus() string {
 	if err != nil {
 		return ""
 	}
-	if p := FindKDBX(filepath.Join(homeDir, ".sato")); p != "" {
+	if p := FindSecretDB(filepath.Join(homeDir, ".sato")); p != "" {
 		return p
 	}
 	return ""
@@ -157,7 +166,7 @@ func printStatus(dbPathFlag string) {
 
 		fmt.Printf("%-9s | %-14s | %-19s | %s\n",
 			priCell(2),
-			"~/.sato/*.kdbx",
+			"~/.sato/*",
 			localStatus,
 			modeCell(localPath),
 		)
@@ -180,7 +189,7 @@ func printStatus(dbPathFlag string) {
 
 		fmt.Printf("%-9s | %-14s | %s\n",
 			priCell(2),
-			"~/.sato/*.kdbx",
+			"~/.sato/*",
 			localStatus,
 		)
 

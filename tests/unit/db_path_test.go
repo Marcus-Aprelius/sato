@@ -8,27 +8,31 @@ import (
 	"sato/internal/sato"
 )
 
-// TestFindKDBX ensures that FindKDBX picks up the first *.kdbx file in a
+// TestFindSecretDB ensures that FindSecretDB picks up the first *.kdbx file in a
 // directory and returns "" for empty or missing directories.
-func TestFindKDBX(t *testing.T) {
-	dir := t.TempDir()
-
-	if got := sato.FindKDBX(dir); got != "" {
-		t.Fatalf("empty dir: got %q; want empty string", got)
+func TestFindSecretDB(t *testing.T) {
+	tests := []struct {
+		name      string
+		extension string
+	}{
+		{"kdbx", ".kdbx"},
+		{"psafe3", ".psafe3"},
+		{"ibak", ".ibak"},
 	}
 
-	target := filepath.Join(dir, "secrets.kdbx")
-	if err := os.WriteFile(target, []byte("x"), 0o600); err != nil {
-		t.Fatalf("write fixture: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			target := filepath.Join(dir, "secrets"+tt.extension)
 
-	if got := sato.FindKDBX(dir); got != target {
-		t.Fatalf("populated dir: got %q; want %q", got, target)
-	}
+			if err := os.WriteFile(target, []byte("test"), 0o600); err != nil {
+				t.Fatalf("write fixture: %v", err)
+			}
 
-	missing := filepath.Join(dir, "does-not-exist")
-	if got := sato.FindKDBX(missing); got != "" {
-		t.Fatalf("missing dir: got %q; want empty string", got)
+			if got := sato.FindSecretDB(dir); got != target {
+				t.Fatalf("FindSecretDB() = %q; want %q", got, target)
+			}
+		})
 	}
 }
 

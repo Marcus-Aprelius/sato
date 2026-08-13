@@ -86,7 +86,7 @@ func Run() error {
 					return err
 				}
 
-				data, err := LoadKeePassData(dbPath, password)
+				data, err := LoadSecretStore(dbPath, password)
 				if err != nil {
 					return err
 				}
@@ -127,7 +127,7 @@ func Run() error {
 					return err
 				}
 
-				data, err := LoadKeePassData(dbPath, password)
+				data, err := LoadSecretStore(dbPath, password)
 				if err != nil {
 					return err
 				}
@@ -181,7 +181,7 @@ func Run() error {
 			return err
 		}
 
-		data, err := LoadKeePassData(dbPath, password)
+		data, err := LoadSecretStore(dbPath, password)
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func Run() error {
 		return err
 	}
 
-	env, err := LoadKeePass(dbPath, password)
+	env, err := LoadSecretEnvironment(dbPath, password)
 	if err != nil {
 		return err
 	}

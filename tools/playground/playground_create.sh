@@ -40,9 +40,8 @@ services:
         echo "=== End of output ==="
 EOF
 
-echo "[3/3] Recreating secrets.kdbx..."
-
-rm -f secrets.kdbx
+echo "[3/3] Recreating secret databases..."
+rm -f secrets.kdbx secrets.psafe3 secrets.ibak
 
 if command -v go >/dev/null 2>&1; then
     go run "$DB_GENERATOR"
@@ -52,7 +51,7 @@ else
         exit 1
     fi
 
-    docker run --rm -v "$PROJECT_DIR:/src" -w /src/tools/playground golang:1.26.5-alpine go run ../create_db/create_test_db.go
+    docker run --rm -v "$PROJECT_DIR:/src" -w /src/tools/playground golang:1.26.7-alpine go run ../create_db/create_test_db.go
 fi
 
 echo ""
@@ -60,10 +59,14 @@ echo "Playground recreated successfully:"
 echo "  .env"
 echo "  docker-compose.yml"
 echo "  secrets.kdbx"
+echo "  secrets.psafe3"
+echo "  secrets.ibak"
 echo ""
 
-echo "KeePass DB:"
-echo "  File:     $PLAYGROUND_DIR/secrets.kdbx"
+echo "Secret databases:"
+echo "  $PLAYGROUND_DIR/secrets.kdbx"
+echo "  $PLAYGROUND_DIR/secrets.psafe3"
+echo "  $PLAYGROUND_DIR/secrets.ibak"
 echo "  Password: $DB_PASSWORD"
 echo ""
 
