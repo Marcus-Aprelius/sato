@@ -32,13 +32,12 @@ Thumbs.db
 *.temp
 *.log
 
-# Dist
 dist/
+tools/dump/
 
-# Test reports
 tests/report_*.txt
 
 # Generated playground files
-playground/.env
-playground/docker-compose.yml
-playground/secrets.kdbx
+tools/playground/.env
+tools/playground/docker-compose.yml
+tools/playground/secrets.kdbx

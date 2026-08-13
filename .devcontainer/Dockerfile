@@ -7,7 +7,8 @@ ARG USER_GID=1000
 WORKDIR /workspaces/sato
 
 RUN apk add --no-cache \
-    bash git docker-cli docker-cli-compose coreutils findutils grep sed make ca-certificates sudo acl
+    bash bash-completion git docker-cli docker-cli-compose docker-cli-buildx \
+    coreutils findutils grep sed make ca-certificates sudo acl openssh
 
 RUN addgroup -g "${USER_GID}" "${USERNAME}" \
     && adduser -D -u "${USER_UID}" -G "${USERNAME}" -s /bin/bash "${USERNAME}" \
@@ -18,8 +19,6 @@ RUN mkdir -p /home/${USERNAME}/go/pkg/mod /home/${USERNAME}/.cache/go-build \
     && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
 
 ENV CGO_ENABLED=0
-ENV GOPATH=/home/sato/go
-ENV GOMODCACHE=/home/sato/go/pkg/mod
-ENV GOCACHE=/home/sato/.cache/go-build
-
-CMD ["sleep", "infinity"]
+ENV GOPATH=/home/${USERNAME}/go
+ENV GOMODCACHE=/home/${USERNAME}/go/pkg/mod
+ENV GOCACHE=/home/${USERNAME}/.cache/go-build

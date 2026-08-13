@@ -34,7 +34,7 @@ echo "  playground_delete.sh"
 echo ""
 
 echo "Generator is kept in:"
-echo "  ../scripts/create_test_db.go"
+echo "  ../create_db/create_test_db.go"
 echo ""
 
 echo "Playground cleanup completed."

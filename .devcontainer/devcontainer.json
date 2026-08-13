@@ -10,6 +10,9 @@
   },
   "remoteUser": "sato",
   "workspaceFolder": "/workspaces/sato",
+  "containerEnv": {
+  "DOCKER_BUILDKIT": "1"
+  },
   "mounts": [
     "source=sato-go-mod-cache,target=/home/sato/go/pkg/mod,type=volume",
     "source=sato-go-build-cache,target=/home/sato/.cache/go-build,type=volume",

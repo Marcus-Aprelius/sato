@@ -20,7 +20,7 @@ This release makes some small improvements. See below for more details.
   - added key `--show-empty-groups` to the command `sato get secrets`
   - `sato help` button  refactored
   - README.md files updated
-  
+
 ---
 
 # Test results:

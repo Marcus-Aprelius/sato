@@ -1,8 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+PROJECT_DIR="$SCRIPT_DIR"
+while [ ! -f "$PROJECT_DIR/go.mod" ]; do
+    parent="$(dirname "$PROJECT_DIR")"
+
+    if [ "$parent" = "$PROJECT_DIR" ]; then
+        echo "ERROR: project root with go.mod not found" >&2
+        exit 1
+    fi
+
+    PROJECT_DIR="$parent"
+done
+
 REPORT_FILE="$PROJECT_DIR/tests/report_unit_tests.txt"
+GO_IMAGE="golang:1.26.5-alpine"
 
 cd "$PROJECT_DIR"
 
@@ -14,13 +28,13 @@ rm -f "$REPORT_FILE"
     echo ""
 
     echo "=== Create playground ==="
-    bash playground/playground_create.sh
+    bash tools/playground/playground_create.sh
     echo ""
 
     cleanup() {
         echo ""
         echo "=== Delete playground ==="
-        bash playground/playground_delete.sh
+        bash tools/playground/playground_delete.sh
     }
 
     trap cleanup EXIT
@@ -28,7 +42,7 @@ rm -f "$REPORT_FILE"
     warn_gofmt() {
         echo "=== Check gofmt ==="
 
-        if command -v go >/dev/null 2>&1; then
+        if command -v gofmt >/dev/null 2>&1; then
             unformatted="$(
                 find . \
                     -type f \
@@ -36,15 +50,15 @@ rm -f "$REPORT_FILE"
                     -not -path "./vendor/*" \
                     -not -path "./dist/*" \
                     -not -path "./bin/*" \
-                    -exec gofmt -l {} \;
+                    -exec gofmt -l {} +
             )"
         else
             unformatted="$(
                 docker run --rm \
                     -v "$PROJECT_DIR:/src" \
                     -w /src \
-                    golang:1.26.5-alpine \
-                    sh -c 'find . -type f -name "*.go" -not -path "./vendor/*" -not -path "./dist/*" -not -path "./bin/*" -exec gofmt -l {} \;'
+                    "$GO_IMAGE" \
+                    sh -c 'find . -type f -name "*.go" -not -path "./vendor/*" -not -path "./dist/*" -not -path "./bin/*" -exec gofmt -l {} +'
             )"
         fi
 
@@ -73,14 +87,13 @@ rm -f "$REPORT_FILE"
             docker run --rm \
                 -v "$PROJECT_DIR:/src" \
                 -w /src \
-                golang:1.26.5-alpine \
+                "$GO_IMAGE" \
                 go vet ./...
         fi
 
         echo "PASS: go vet"
         echo ""
     }
-
 
     warn_gofmt
     run_go_vet
@@ -91,12 +104,14 @@ rm -f "$REPORT_FILE"
         echo ""
         go test -v -coverpkg=./internal/sato ./internal/sato ./tests/unit
     else
-        echo "[Runner] docker golang:1.26.5-alpine"
+        echo "[Runner] docker $GO_IMAGE"
         echo ""
         docker run --rm \
             -v "$PROJECT_DIR:/src" \
             -w /src \
-            golang:1.26.5-alpine \
+            -v sato-go-mod-cache:/go/pkg/mod \
+            -v sato-go-build-cache:/root/.cache/go-build \
+            "$GO_IMAGE" \
             go test -v -coverpkg=./internal/sato ./internal/sato ./tests/unit
     fi
 } 2>&1 | tee "$REPORT_FILE"
