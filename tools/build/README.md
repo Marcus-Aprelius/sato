@@ -1,20 +1,21 @@
 # create.sh
 
-Locally Go installed or RPM/DEB tooling is not required since 
-docker image is used. Created files are located in folder `dist`.
+Locally Go installed or RPM/DEB tooling is not required since docker image is used.
 
-Usage of Go commands examples:
+Created files are located in folder `dist`.
+
+Examples of usage Go commands:
 
   ```bash
-  docker run --rm -v "$PWD:/src" -w /src golang:1.26.5-alpine go mod tidy
+  docker run --rm -v "$PWD:/src" -w /src golang:1.26.7-alpine go mod tidy
   ```
 
 Or create `bash` alias:
   ```bash
-  alias go='docker run --rm -v $(pwd):/src -w /src golang:1.26.5-alpine go'
+  alias go='docker run --rm -v $(pwd):/src -w /src golang:1.26.7-alpine go'
   ```
   ```bash
-  alias gofmt='docker run --rm -v $(pwd):/src -w /src golang:1.26.5-alpine gofmt'
+  alias gofmt='docker run --rm -v $(pwd):/src -w /src golang:1.26.7-alpine gofmt'
   ```
 
 ---

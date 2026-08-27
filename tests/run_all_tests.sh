@@ -16,7 +16,7 @@ while [ ! -f "$PROJECT_DIR/go.mod" ]; do
 done
 
 REPORT_FILE="$PROJECT_DIR/tests/report_all_tests.txt"
-GO_IMAGE="golang:1.26.5-alpine"
+GO_IMAGE="golang:1.26.7-alpine"
 
 cd "$PROJECT_DIR"
 

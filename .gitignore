@@ -5,8 +5,10 @@
 *.so
 *.dylib
 
-# KeePass databases (SECURITY: never commit secrets)
+# Secret databases
 *.kdbx
+*.psafe3
+*.ibak
 
 # Go build and test
 go.sum.bak

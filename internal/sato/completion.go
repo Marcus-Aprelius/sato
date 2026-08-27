@@ -29,6 +29,14 @@ _sato_docker_completion() {
 	return 0
 }
 
+_sato_db_completion() {
+	local cur="$1"
+
+	COMPREPLY=(
+		$(compgen -f -- "$cur" | grep -E '\.(kdbx|psafe3|ibak)$')
+	)
+}
+
 _sato_completion() {
 	local cur prev words cword
 	_init_completion || return
@@ -89,7 +97,7 @@ _sato_completion() {
 			fi
 			;;
 		--db-path)
-			_filedir '*.kdbx'
+			_sato_db_completion "$cur"
 			return
 			;;
 		--secret)
@@ -104,7 +112,7 @@ _sato_completion() {
 			;;
 		2)
 			if [[ "${words[1]}" == "--db-path" ]]; then
-				_filedir '*.kdbx'
+				_sato_db_completion "$cur"
 			elif [[ "${words[1]}" == "--secret" ]]; then
 				COMPREPLY=()
 			elif [[ "${words[1]}" == "get" ]]; then

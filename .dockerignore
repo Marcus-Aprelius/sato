@@ -8,6 +8,9 @@ tmp/
 tests/report_*.txt
 
 *.kdbx
+*.psafe3
+*.ibak
+
 .env
 .env.*
 
